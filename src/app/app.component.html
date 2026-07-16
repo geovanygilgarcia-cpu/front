@@ -1,0 +1,428 @@
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">Rx</div>
+      <div class="brand-text">
+        <div class="name">Consultorio Médico</div>
+        <div class="role">Expediente electrónico</div>
+      </div>
+    </div>
+
+    <div class="search-box">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" placeholder="Buscar paciente o expediente..." [(ngModel)]="filtroPaciente">
+    </div>
+
+    <button class="btn primary" style="width:100%; justify-content:center; margin-bottom:14px;" (click)="abrirModalNuevoPaciente()">
+      + Nuevo paciente
+    </button>
+
+    <div class="side-label">Pacientes recientes</div>
+
+    <div class="side-status" *ngIf="cargandoPacientes">Cargando pacientes…</div>
+
+    <div class="side-status error" *ngIf="errorPacientes">
+      {{ errorPacientes }}
+      <button (click)="cargarPacientes()">Reintentar</button>
+    </div>
+
+    <ul class="patient-list" *ngIf="!cargandoPacientes && !errorPacientes">
+      <li
+        *ngFor="let p of pacientesFiltrados"
+        class="patient-item"
+        [class.active]="p.id === pacienteActivoId"
+        (click)="seleccionarPaciente(p.id)">
+        <div class="avatar">{{ p.iniciales }}</div>
+        <div>
+          <div class="pi-name">{{ p.nombreCompleto }}</div>
+          <div class="pi-meta">Exp. {{ p.expediente }} · {{ p.edad ?? '—' }} años</div>
+        </div>
+      </li>
+      <li *ngIf="pacientesFiltrados.length === 0" class="side-status">
+        Sin resultados para "{{ filtroPaciente }}"
+      </li>
+    </ul>
+
+    <div class="sidebar-foot">
+      <div class="avatar">DR</div>
+      <div>
+        <div class="foot-name">Dr. Fredy Gil Garcia </div>
+        <div class="foot-role">TRAUMATOLOGÍA Y ORTOPEDIA </div>
+        <div class="foot-role">ALTA ESPECIALIDAD EN CIRUGÍA ARTICULAR</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="patient-header" *ngIf="pacienteActivo">
+      <div class="ph-left">
+        <div class="ph-avatar">{{ pacienteActivo.iniciales }}</div>
+        <div>
+          <div class="ph-name">{{ pacienteActivo.nombreCompleto }}</div>
+          <div class="ph-tags">
+            <span class="tag mono">Exp. {{ pacienteActivo.expediente }}</span>
+            <span class="tag">{{ pacienteActivo.edad ?? '—' }} años</span>
+          </div>
+        </div>
+      </div>
+      <div class="ph-actions">
+        <button class="btn" (click)="abrirModalEditarPaciente()">Editar paciente</button>
+        <button class="btn coral" (click)="eliminarPacienteActivo()" [disabled]="eliminandoPaciente">
+          {{ eliminandoPaciente ? 'Eliminando...' : 'Eliminar paciente' }}
+        </button>
+        <button class="btn primary" (click)="seleccionarTab('recetas')">+ Nueva receta</button>
+        <button class="btn primary" (click)="seleccionarTab('historia')">+ Nueva historia</button>
+      </div>
+    </div>
+
+    <div class="side-status" *ngIf="!pacienteActivo" style="margin-bottom:18px;">
+      No hay ningún paciente seleccionado. Elige uno de la lista o crea uno nuevo con "+ Nuevo paciente".
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn" [class.active]="tabActivo === 'historia'" (click)="seleccionarTab('historia')">Historia clínica</button>
+      <button class="tab-btn" [class.active]="tabActivo === 'recetas'" (click)="seleccionarTab('recetas')">Recetas</button>
+    </div>
+
+    <!-- ===== HISTORIA CLÍNICA ===== -->
+    <section class="panel" *ngIf="tabActivo === 'historia' && !pacienteActivo">
+      <div class="card">
+        <div class="side-status" style="text-align:center; padding: 30px 10px;">
+          Selecciona un paciente de la lista para ver o crear su historia clínica.
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="tabActivo === 'historia' && pacienteActivo">
+      <div class="card">
+
+        <div class="error-banner" *ngIf="errorHistorial">{{ errorHistorial }}</div>
+        <div class="success-banner" *ngIf="exitoHistorial">{{ exitoHistorial }}</div>
+
+        <div class="hc-section-title"><span class="n">01</span><h4>Información del paciente</h4></div>
+        <div class="side-status" *ngIf="infoPacienteBloqueada" style="margin-bottom:12px; font-size:12px;">
+          Estos datos se tomaron de la ficha del paciente. Para modificarlos usa "Editar paciente".
+        </div>
+        <div class="grid cols-2">
+          <div class="field">
+            <label>Nombre</label>
+            <input [(ngModel)]="historial.patientInformation.fullName" [disabled]="infoPacienteBloqueada">
+          </div>
+          <div class="field">
+            <label>Teléfono</label>
+            <input [(ngModel)]="historial.patientInformation.phone" [disabled]="infoPacienteBloqueada">
+          </div>
+          <div class="field">
+            <label>Fecha de nacimiento</label>
+            <input type="date" [(ngModel)]="historial.patientInformation.dateOfBirth" [disabled]="infoPacienteBloqueada">
+          </div>
+          <div class="field">
+            <label>Correo</label>
+            <input [(ngModel)]="historial.patientInformation.email" [disabled]="infoPacienteBloqueada">
+          </div>
+        </div>
+        <div class="grid cols-2" style="margin-top:14px;">
+          <div class="field">
+            <label>Género</label>
+            <div class="checkbox-row">
+              <label class="checkbox-option">
+                <input type="radio" name="gender" [value]="'MALE'" [(ngModel)]="historial.patientInformation.gender" [disabled]="infoPacienteBloqueada"> Hom.
+              </label>
+              <label class="checkbox-option">
+                <input type="radio" name="gender" [value]="'FEMALE'" [(ngModel)]="historial.patientInformation.gender" [disabled]="infoPacienteBloqueada"> Mujer
+              </label>
+              <label class="checkbox-option">
+                <input type="radio" name="gender" [value]="'OTHER'" [(ngModel)]="historial.patientInformation.gender" [disabled]="infoPacienteBloqueada"> Otro
+              </label>
+            </div>
+          </div>
+          <div class="field">
+            <label>Contacto de emergencia</label>
+            <input [(ngModel)]="historial.patientInformation.emergencyContact" [disabled]="infoPacienteBloqueada">
+          </div>
+        </div>
+
+        <div class="hc-section-title"><span class="n">02</span><h4>Historial médico</h4></div>
+
+        <div class="qa-row">
+          <div class="qa-question">¿Tiene alguna enfermedad crónica?</div>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="chronic" [value]="true" [(ngModel)]="historial.medicalHistory.hasChronicDisease.active"> Sí</label>
+            <label class="checkbox-option"><input type="radio" name="chronic" [value]="false" [(ngModel)]="historial.medicalHistory.hasChronicDisease.active"> No</label>
+          </div>
+          <input class="qa-especifica" [(ngModel)]="historial.medicalHistory.hasChronicDisease.specific" placeholder="Especificar">
+        </div>
+
+        <div class="qa-row">
+          <div class="qa-question">¿Ha tenido cirugías mayores?</div>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="surgeries" [value]="true" [(ngModel)]="historial.medicalHistory.hasHadMajorSurgeries.active"> Sí</label>
+            <label class="checkbox-option"><input type="radio" name="surgeries" [value]="false" [(ngModel)]="historial.medicalHistory.hasHadMajorSurgeries.active"> No</label>
+          </div>
+          <input class="qa-especifica" [(ngModel)]="historial.medicalHistory.hasHadMajorSurgeries.specific" placeholder="Especificar">
+        </div>
+
+        <div class="qa-row">
+          <div class="qa-question">¿Toma algún medicamento?</div>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="medication" [value]="true" [(ngModel)]="historial.medicalHistory.takesMedication.active"> Sí</label>
+            <label class="checkbox-option"><input type="radio" name="medication" [value]="false" [(ngModel)]="historial.medicalHistory.takesMedication.active"> No</label>
+          </div>
+          <input class="qa-especifica" [(ngModel)]="historial.medicalHistory.takesMedication.medicationName" placeholder="Nombre de la medicina">
+        </div>
+
+        <div class="qa-row">
+          <div class="qa-question">¿Tiene alguna alergia?</div>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="allergy" [value]="true" [(ngModel)]="historial.medicalHistory.hasAllergies.active"> Sí</label>
+            <label class="checkbox-option"><input type="radio" name="allergy" [value]="false" [(ngModel)]="historial.medicalHistory.hasAllergies.active"> No</label>
+          </div>
+          <input class="qa-especifica" [(ngModel)]="historial.medicalHistory.hasAllergies.specific" placeholder="Especificar">
+        </div>
+
+        <div class="hc-section-title"><span class="n">03</span><h4>Historia médica familiar</h4></div>
+        <div class="field" style="margin-bottom:10px;">
+          <label>¿Alguno de sus familiares inmediatos tiene antecedentes de lo siguiente?</label>
+        </div>
+        <div class="checkbox-grid">
+          <label class="checkbox-option"><input type="checkbox" [(ngModel)]="historial.familyMedicalHistory.heartDisease"> Cardiopatía</label>
+          <label class="checkbox-option"><input type="checkbox" [(ngModel)]="historial.familyMedicalHistory.highBloodPressure"> Presión arterial</label>
+          <label class="checkbox-option"><input type="checkbox" [(ngModel)]="historial.familyMedicalHistory.other.active"> Otro</label>
+          <label class="checkbox-option"><input type="checkbox" [(ngModel)]="historial.familyMedicalHistory.diabetes"> Diabetes</label>
+          <label class="checkbox-option"><input type="checkbox" [(ngModel)]="historial.familyMedicalHistory.cancer.active"> Cáncer</label>
+        </div>
+        <div class="grid cols-2" style="margin-top:12px;">
+          <div class="field">
+            <label>Especificar cáncer</label>
+            <input class="qa-especifica" style="width:100%;" [(ngModel)]="historial.familyMedicalHistory.cancer.specific" placeholder="Ej. tipo de cáncer, familiar afectado">
+          </div>
+          <div class="field">
+            <label>Especificar otro</label>
+            <input class="qa-especifica" style="width:100%;" [(ngModel)]="historial.familyMedicalHistory.other.specific" placeholder="Especifica">
+          </div>
+        </div>
+
+        <div class="hc-section-title"><span class="n">04</span><h4>Razón de la visita</h4></div>
+        <div class="field"><label>Síntomas</label><input [(ngModel)]="historial.reasonForVisit.symptoms"></div>
+        <div class="field" style="margin-top:10px;"><label>Duración de los síntomas</label><input [(ngModel)]="historial.reasonForVisit.symptomDuration"></div>
+        <div class="field" style="margin-top:10px;"><label>Tratamiento anterior</label><input [(ngModel)]="historial.reasonForVisit.previousTreatment"></div>
+
+        <div class="hc-section-title"><span class="n">05</span><h4>Notas del médico</h4></div>
+        <div class="field"><label>Evaluación inicial</label><textarea [(ngModel)]="historial.doctorNotes.initialEvaluation"></textarea></div>
+        <div class="field" style="margin-top:10px;"><label>Pruebas / tratamientos recomendados</label><textarea [(ngModel)]="historial.doctorNotes.recommendedTestsOrTreatments"></textarea></div>
+        <div class="field" style="margin-top:10px;">
+          <label>Cita de seguimiento</label>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="followup" [value]="true" [(ngModel)]="historial.doctorNotes.followUpAppointment.active"> Sí</label>
+            <label class="checkbox-option"><input type="radio" name="followup" [value]="false" [(ngModel)]="historial.doctorNotes.followUpAppointment.active"> No</label>
+            <input class="qa-especifica" style="max-width:160px;" type="date" [(ngModel)]="historial.doctorNotes.followUpAppointment.date">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button class="btn" (click)="imprimirHistoria()" [disabled]="guardandoPdfHistorial">
+            {{ guardandoPdfHistorial ? 'Generando PDF...' : 'Imprimir' }}
+          </button>
+          <button class="btn primary" (click)="guardarHistoriaClinica()" [disabled]="guardandoHistorial">
+            {{ guardandoHistorial ? 'Guardando...' : (historialIdGuardado ? 'Actualizar historia clínica' : 'Guardar historia clínica') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== RECETAS ===== -->
+    <section class="panel" *ngIf="tabActivo === 'recetas' && !pacienteActivo">
+      <div class="card">
+        <div class="side-status" style="text-align:center; padding: 30px 10px;">
+          Selecciona un paciente de la lista para ver o crear su receta.
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" *ngIf="tabActivo === 'recetas' && pacienteActivo">
+      <div class="card">
+
+        <div class="error-banner" *ngIf="errorReceta">{{ errorReceta }}</div>
+        <div class="success-banner" *ngIf="exitoReceta">{{ exitoReceta }}</div>
+
+        <div class="field" style="margin-bottom:18px;" *ngIf="recetasPaciente.length > 0">
+          <label>Recetas de este paciente</label>
+          <div class="checklist" style="margin-top:8px;">
+            <div
+              class="chip"
+              *ngFor="let r of recetasPaciente"
+              [class.on]="r.id === recetaIdGuardada"
+              (click)="seleccionarReceta(r.id)">
+              Folio {{ r.folio || '—' }}<ng-container *ngIf="r.fecha"> · {{ r.fecha.dia }}/{{ r.fecha.mes }}/{{ r.fecha.anio }}</ng-container>
+            </div>
+            <div
+              class="chip"
+              [class.on]="recetaIdGuardada === null"
+              (click)="nuevaReceta()">
+              + Nueva receta
+            </div>
+          </div>
+        </div>
+
+        <div class="hc-section-title"><span class="n">01</span><h4>Datos generales</h4></div>
+        <div class="grid cols-3">
+          <div class="field">
+            <label>Folio</label>
+            <input
+              [(ngModel)]="receta.folio"
+              [disabled]="true"
+              [placeholder]="recetaIdGuardada ? '' : 'Se asignará automáticamente al guardar'">
+          </div>
+          <div class="field" style="grid-column: span 2;">
+            <label>Paciente</label>
+            <input [(ngModel)]="receta.paciente" [disabled]="true">
+          </div>
+        </div>
+        <div class="grid cols-3" style="margin-top:14px;">
+          <div class="field">
+            <label>Edad</label>
+            <input [(ngModel)]="receta.edad" [disabled]="true">
+          </div>
+          <div class="field"><label>Fecha</label><input type="date" [(ngModel)]="receta.fecha"></div>
+          <div class="field"><label>Próxima cita</label><input type="date" [(ngModel)]="receta.proximaCita"></div>
+        </div>
+
+        <div class="hc-section-title"><span class="n">02</span><h4>Signos vitales</h4></div>
+        <div class="grid cols-4">
+          <div class="field"><label>Peso</label><input [(ngModel)]="receta.peso" placeholder="Ej. 78 kg"></div>
+          <div class="field"><label>Talla</label><input [(ngModel)]="receta.talla" placeholder="Ej. 1.72 m"></div>
+          <div class="field"><label>T/A</label><input [(ngModel)]="receta.ta"></div>
+          <div class="field"><label>FC</label><input [(ngModel)]="receta.fc"></div>
+        </div>
+        <div class="grid cols-4" style="margin-top:14px;">
+          <div class="field"><label>FR</label><input [(ngModel)]="receta.fr"></div>
+          <div class="field"><label>Temp</label><input [(ngModel)]="receta.temp"></div>
+          <div class="field"><label>SATO2</label><input [(ngModel)]="receta.sato2"></div>
+          <div class="field"><label>IMC</label><input [(ngModel)]="receta.imc"></div>
+        </div>
+
+        <div class="hc-section-title"><span class="n">03</span><h4>Alergias</h4></div>
+        <div class="qa-row">
+          <div class="qa-question">¿Tiene alguna alergia conocida?</div>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="checkbox" [checked]="receta.alergias && receta.alergias !== 'Ninguna conocida'"> Sí</label>
+            <label class="checkbox-option"><input type="checkbox" [checked]="!receta.alergias || receta.alergias === 'Ninguna conocida'"> No</label>
+          </div>
+          <input class="qa-especifica" [(ngModel)]="receta.alergias" placeholder="Especificar">
+        </div>
+
+        <div class="hc-section-title"><span class="n">04</span><h4>Diagnóstico e indicación (IDX)</h4></div>
+        <div class="field">
+          <label>Descripción</label>
+          <textarea rows="3" [(ngModel)]="receta.idx"></textarea>
+        </div>
+
+        <div class="hc-section-title"><span class="n">05</span><h4>Medicamentos</h4></div>
+        <div class="med-row" *ngFor="let med of medicamentos; let i = index">
+          <div class="med-row-num">{{ i + 1 }}</div>
+          <div class="med-row-fields">
+            <div class="field"><label>Medicamento</label><input [(ngModel)]="med.medicamento" placeholder="Nombre y presentación"></div>
+            <div class="field" style="margin-top:10px;"><label>Indicación</label><input [(ngModel)]="med.indicacion" placeholder="Dosis, vía y frecuencia"></div>
+          </div>
+          <button class="med-row-remove" (click)="quitarMedicamento(i)">×</button>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start; margin-top:10px;">
+          <button class="btn" (click)="agregarMedicamento()">+ Agregar medicamento</button>
+        </div>
+
+        <div class="hc-section-title"><span class="n">06</span><h4>Firma</h4></div>
+        <div class="field">
+          <label>Médico que expide</label>
+          <input [(ngModel)]="receta.firma" [disabled]="true">
+        </div>
+
+        <div class="form-actions">
+          <button class="btn" (click)="imprimirReceta()" [disabled]="guardandoPdfReceta">
+            {{ guardandoPdfReceta ? 'Generando PDF...' : 'Imprimir' }}
+          </button>
+          <button
+            class="btn coral"
+            *ngIf="recetaIdGuardada"
+            (click)="eliminarRecetaActiva()"
+            [disabled]="eliminandoReceta">
+            {{ eliminandoReceta ? 'Eliminando...' : 'Eliminar receta' }}
+          </button>
+          <button class="btn primary" (click)="guardarReceta()" [disabled]="guardandoReceta">
+            {{ guardandoReceta ? 'Guardando...' : (recetaIdGuardada ? 'Actualizar receta' : 'Guardar receta') }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== MODAL: NUEVO / EDITAR PACIENTE ===== -->
+<div class="modal-overlay" *ngIf="modalPacienteAbierto" (click)="cerrarModalPaciente()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ pacienteIdEnEdicion  ? 'Editar paciente' : 'Nuevo paciente' }}</h3>
+      <button class="modal-close" (click)="cerrarModalPaciente()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="error-banner" *ngIf="errorPaciente">{{ errorPaciente }}</div>
+      <div class="success-banner" *ngIf="exitoPaciente">{{ exitoPaciente }}</div>
+
+      <div class="grid cols-2">
+        <div class="field">
+          <label>Expediente</label>
+          <input
+            [(ngModel)]="pacienteNuevo.expediente"
+            [disabled]="true"
+            [placeholder]="pacienteIdEnEdicion ? '' : 'Se asignará automáticamente al guardar'">
+        </div>
+        <div class="field"><label>Nombre completo</label><input [(ngModel)]="pacienteNuevo.nombreCompleto" placeholder="Nombre y apellidos"></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div class="field"><label>Teléfono</label><input [(ngModel)]="pacienteNuevo.telefono" placeholder="55 1234 5678"></div>
+        <div class="field"><label>Fecha de nacimiento </label><input type="date" [(ngModel)]="pacienteNuevo.fechaNacimiento"></div>
+      </div>
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div class="field"><label>Correo</label><input [(ngModel)]="pacienteNuevo.email" placeholder="correo@ejemplo.com"></div>
+        <div class="field">
+          <label>Género</label>
+          <div class="checkbox-row">
+            <label class="checkbox-option"><input type="radio" name="generoNuevo" [value]="'MALE'" [(ngModel)]="pacienteNuevo.genero"> Hom.</label>
+            <label class="checkbox-option"><input type="radio" name="generoNuevo" [value]="'FEMALE'" [(ngModel)]="pacienteNuevo.genero"> Mujer</label>
+            <label class="checkbox-option"><input type="radio" name="generoNuevo" [value]="'OTHER'" [(ngModel)]="pacienteNuevo.genero"> Otro</label>
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:14px;">
+        <label>Contacto de emergencia</label>
+        <input [(ngModel)]="pacienteNuevo.contactoEmergencia" placeholder="Nombre - teléfono">
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" (click)="cerrarModalPaciente()">Cancelar</button>
+      <button class="btn primary" (click)="guardarPacienteNuevo()" [disabled]="guardandoPaciente">
+        {{ guardandoPaciente ? 'Guardando...' : (pacienteIdEnEdicion ? 'Actualizar paciente' : 'Guardar paciente') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-container">
+  <div
+    class="toast"
+    *ngFor="let toast of toasts"
+    [class.success]="toast.tipo === 'success'"
+    [class.error]="toast.tipo === 'error'">
+    <span>{{ toast.mensaje }}</span>
+    <button class="toast-close" (click)="cerrarToast(toast.id)">×</button>
+  </div>
+</div>
