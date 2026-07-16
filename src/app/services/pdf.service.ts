@@ -16,7 +16,7 @@ import { PatientIntakeFormDTO } from '../models/historial.model';
  */
 @Injectable({ providedIn: 'root' })
 export class PdfService {
-  private readonly baseUrl = 'http://localhost:8080/api/expedientes';
+  private readonly baseUrl = 'https://cics.onrender.com/api/expedientes';
 
   constructor(private http: HttpClient) {}
 
