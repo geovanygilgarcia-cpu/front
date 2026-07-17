@@ -6,7 +6,7 @@ import { PatientIntakeFormDTO, HistoriaClinicaResponseDTO } from '../models/hist
 
 @Injectable({ providedIn: 'root' })
 export class HistorialService {
-  private readonly baseUrl = `${environment.apiUrl}/api/historias`;
+  private readonly baseUrl = `${environment.apiMedic}/api/historias`;
 
   constructor(private http: HttpClient) {}
 

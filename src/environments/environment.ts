@@ -1,4 +1,7 @@
 export const environment = {
-  production: false,
-  apiUrl: 'https://medic-l7h9.onrender.com'
+  production: true,
+  apiMedic: 'https://medic-l7h9.onrender.com',
+  apiCics: 'https://cics.onrender.com'
 };
+
+

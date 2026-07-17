@@ -325,11 +325,48 @@
         <div class="med-row" *ngFor="let med of medicamentos; let i = index">
           <div class="med-row-num">{{ i + 1 }}</div>
           <div class="med-row-fields">
-            <div class="field"><label>Medicamento</label><input [(ngModel)]="med.medicamento" placeholder="Nombre y presentación"></div>
+            <div class="field med-autocomplete">
+              <label>Medicamento</label>
+              <div class="autocomplete-wrap">
+                <input
+                  [(ngModel)]="med.medicamento"
+                  placeholder="Nombre y presentación"
+                  autocomplete="off"
+                  (focus)="abrirDropdownMedicamento(i)"
+                  (input)="abrirDropdownMedicamento(i)"
+                  (blur)="cerrarDropdownMedicamentoConDelay()">
+                <svg class="autocomplete-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+
+                <div class="autocomplete-panel" *ngIf="medicamentoDropdownAbiertoIndex === i">
+                  <div class="autocomplete-empty" *ngIf="filtrarCatalogoPara(i).length === 0">
+                    Sin coincidencias en el catálogo — puedes escribir uno nuevo
+                  </div>
+                  <div
+                    class="autocomplete-option"
+                    *ngFor="let m of filtrarCatalogoPara(i)"
+                    (mousedown)="seleccionarMedicamentoDeCatalogo(i, m)">
+                    <div class="ao-name">{{ m.medicamento }}</div>
+                    <div class="ao-sub">{{ m.indicacion }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="field" style="margin-top:10px;"><label>Indicación</label><input [(ngModel)]="med.indicacion" placeholder="Dosis, vía y frecuencia"></div>
           </div>
           <button class="med-row-remove" (click)="quitarMedicamento(i)">×</button>
         </div>
+
+        <div class="form-actions" style="justify-content:flex-start; margin-top:10px;">
+          <button class="btn" (click)="agregarMedicamento()">+ Agregar medicamento</button>
+        </div>
+
+        <!-- Datalist compartido para el autocompletado del catálogo de medicamentos -->
+        <datalist id="catalogo-medicamentos">
+          <option *ngFor="let m of catalogoMedicamentos" [value]="m.medicamento"></option>
+        </datalist>
+
         <div class="form-actions" style="justify-content:flex-start; margin-top:10px;">
           <button class="btn" (click)="agregarMedicamento()">+ Agregar medicamento</button>
         </div>

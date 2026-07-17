@@ -6,7 +6,7 @@ import { Paciente, PacienteRequest } from '../models/paciente.model';
 
 @Injectable({ providedIn: 'root' })
 export class PacienteService {
-  private readonly baseUrl = `${environment.apiUrl}/api/pacientes`;
+  private readonly baseUrl = `${environment.apiMedic}/api/pacientes`;
 
   constructor(private http: HttpClient) {}
 

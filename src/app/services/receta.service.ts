@@ -6,7 +6,7 @@ import { RecetaDTO, RecetaResponseDTO } from '../models/receta.model';
 
 @Injectable({ providedIn: 'root' })
 export class RecetaService {
-  private readonly baseUrl = `${environment.apiUrl}/api/recetas`;
+  private readonly baseUrl = `${environment.apiMedic}/api/recetas`;
 
   constructor(private http: HttpClient) {}
 

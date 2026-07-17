@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PdfService } from './services/pdf.service';
@@ -8,6 +8,8 @@ import { RecetaService } from './services/receta.service';
 import { RecetaDTO, RecetaResponseDTO } from './models/receta.model';
 import { HistorialService } from './services/historial.service';
 import { PatientIntakeFormDTO, HistoriaClinicaResponseDTO } from './models/historial.model';
+import { MedicamentoService } from './services/medicamentos.service';
+import { Medicamento } from './models/medicamento.model';
 import Swal from 'sweetalert2';
 
 type TabId = 'historia' | 'consultas' | 'recetas';
@@ -52,16 +54,16 @@ interface RecetaForm {
 })
 export class AppComponent implements OnInit {
 
-  constructor(
-    private pacienteService: PacienteService,
-    private recetaService: RecetaService,
-    private historialService: HistorialService,
-    private cdr: ChangeDetectorRef,
-    private pdfService: PdfService
-  ) {}
+  private pacienteService = inject(PacienteService);
+  private recetaService = inject(RecetaService);
+  private historialService = inject(HistorialService);
+  private cdr = inject(ChangeDetectorRef);
+  private pdfService = inject(PdfService);
+  private medicamentoService = inject(MedicamentoService);
 
   ngOnInit(): void {
     this.cargarPacientes();
+    this.cargarCatalogoMedicamentos();
   }
 
   /**
@@ -177,14 +179,12 @@ export class AppComponent implements OnInit {
     this.errorPacientes = '';
 
     this.pacienteService.listarTodos().subscribe({
-      next: (data) => {
+      next: (data: Paciente[]) => {
         this.pacientes = data;
         this.cargandoPacientes = false;
-        // No se selecciona ningún paciente automáticamente al cargar.
-        // El usuario debe elegir uno de la lista para ver/editar su información.
         this.refrescarVista();
       },
-      error: (err) => {
+      error: (err: any) => {
         this.errorPacientes = 'No se pudo cargar la lista de pacientes.';
         this.cargandoPacientes = false;
         console.error(err);
@@ -215,9 +215,6 @@ export class AppComponent implements OnInit {
       this.sincronizarInfoPacienteEnHistorial(paciente);
     }
 
-    // Al cambiar de paciente, se busca si ya tiene historia clínica y/o
-    // receta guardadas. Si existen, se cargan al formulario. Si no, se
-    // deja el formulario en blanco (sin inventar ni arrastrar datos de otro paciente).
     this.cargarHistorialExistente(id);
     this.cargarRecetaExistente(id);
   }
@@ -226,12 +223,10 @@ export class AppComponent implements OnInit {
     (event.target as HTMLElement).classList.toggle('on');
   }
 
-  /** El expediente ya no se captura a mano: se calcula a partir del ID del paciente. */
   formatExpediente(id: number): string {
     return String(id).padStart(4, '0');
   }
 
-  /** El folio de receta tampoco se captura a mano: se calcula a partir del ID de la receta. */
   formatFolio(id: number): string {
     return String(id).padStart(4, '0');
   }
@@ -252,7 +247,6 @@ export class AppComponent implements OnInit {
     contactoEmergencia: ''
   };
 
-  // Si tiene valor, "Guardar" actualiza ese paciente. Si es null, crea uno nuevo.
   pacienteIdEnEdicion: number | null = null;
 
   guardandoPaciente = false;
@@ -306,8 +300,6 @@ export class AppComponent implements OnInit {
         next: (guardado) => {
           this.guardandoPaciente = false;
 
-          // Si el backend no regresa el objeto actualizado (204 sin body, etc.),
-          // usamos el id que ya teníamos y los datos del formulario como respaldo.
           const idResultante = guardado?.id ?? this.pacienteIdEnEdicion;
           const nombreResultante = guardado?.nombreCompleto ?? this.pacienteNuevo.nombreCompleto;
 
@@ -317,8 +309,6 @@ export class AppComponent implements OnInit {
             : `Paciente "${nombreResultante}" guardado con éxito.`;
           this.modalPacienteAbierto = false;
 
-          // Si es un paciente nuevo, ahora que ya tiene ID, le asignamos
-          // su expediente (ID con ceros a la izquierda) con una petición extra.
           if (!esActualizacion && idResultante) {
             const expedienteCalculado = this.formatExpediente(idResultante);
             this.pacienteService.actualizar(idResultante, {
@@ -418,11 +408,6 @@ export class AppComponent implements OnInit {
     this.exitoPaciente = '';
   }
 
-  /**
-   * Copia los datos generales del paciente (ya capturados en su ficha)
-   * hacia la sección "Información del paciente" de la historia clínica,
-   * para que esos campos queden autollenados y bloqueados en el formulario.
-   */
   private sincronizarInfoPacienteEnHistorial(paciente: Paciente): void {
     this.historial.patientInformation = {
       fullName: paciente.nombreCompleto,
@@ -434,16 +419,64 @@ export class AppComponent implements OnInit {
     };
   }
 
-  /** true cuando hay un paciente seleccionado: bloquea los campos de "Información del paciente". */
   get infoPacienteBloqueada(): boolean {
     return !!this.pacienteActivoId;
+  }
+
+  // ==================================================================
+  // ===== CATÁLOGO DE MEDICAMENTOS (autocomplete personalizado) ========
+  // ==================================================================
+
+  catalogoMedicamentos: Medicamento[] = [];
+
+  /** Índice de la fila de medicamento cuyo panel de sugerencias está abierto (null = ninguno). */
+  medicamentoDropdownAbiertoIndex: number | null = null;
+
+  cargarCatalogoMedicamentos(): void {
+    this.medicamentoService.listarTodos().subscribe({
+      next: (data: Medicamento[]) => {
+        this.catalogoMedicamentos = data;
+        this.refrescarVista();
+      },
+      error: (err: any) => {
+        console.error('No se pudo cargar el catálogo de medicamentos:', err);
+      }
+    });
+  }
+
+  /** Filtra el catálogo según lo escrito en la fila `index`. Si está vacío, muestra los primeros 8 como sugerencia general. */
+  filtrarCatalogoPara(index: number): Medicamento[] {
+    const texto = (this.medicamentos[index]?.medicamento || '').trim().toLowerCase();
+    if (!texto) return this.catalogoMedicamentos.slice(0, 8);
+    return this.catalogoMedicamentos
+      .filter(m => m.medicamento.toLowerCase().includes(texto))
+      .slice(0, 8);
+  }
+
+  abrirDropdownMedicamento(index: number): void {
+    this.medicamentoDropdownAbiertoIndex = index;
+    this.refrescarVista();
+  }
+
+  /** Pequeño delay antes de cerrar, para que el (mousedown) de la opción alcance a dispararse antes del (blur). */
+  cerrarDropdownMedicamentoConDelay(): void {
+    setTimeout(() => {
+      this.medicamentoDropdownAbiertoIndex = null;
+      this.refrescarVista();
+    }, 150);
+  }
+
+  seleccionarMedicamentoDeCatalogo(index: number, m: Medicamento): void {
+    this.medicamentos[index].medicamento = m.medicamento;
+    this.medicamentos[index].indicacion = m.indicacion;
+    this.medicamentoDropdownAbiertoIndex = null;
+    this.refrescarVista();
   }
 
   // ==================================================================
   // ===== RECETA — conectada a POST/PUT /api/recetas ===================
   // ==================================================================
 
-  /** El médico que expide la receta siempre es el mismo en este consultorio. */
   readonly medicoFijo = 'Dr. Fredy Gil Garcia';
 
   receta: RecetaForm = {
@@ -483,10 +516,8 @@ export class AppComponent implements OnInit {
   errorReceta = '';
   exitoReceta = '';
 
-  /** Todas las recetas guardadas del paciente activo, para poder elegir cuál ver/editar. */
   recetasPaciente: RecetaResponseDTO[] = [];
 
-  /** Busca todas las recetas del paciente. Si tiene alguna, carga la más reciente. Si no, deja el form vacío. */
   cargarRecetaExistente(pacienteId: number): void {
     this.recetaService.listarPorPaciente(pacienteId).subscribe({
       next: (data) => {
@@ -507,7 +538,6 @@ export class AppComponent implements OnInit {
     });
   }
 
-  /** Carga en el formulario una receta específica de la lista (al hacer clic en un chip). */
   seleccionarReceta(id: number): void {
     const receta = this.recetasPaciente.find(r => r.id === id);
     if (!receta) return;
@@ -515,7 +545,6 @@ export class AppComponent implements OnInit {
     this.refrescarVista();
   }
 
-  /** Limpia el formulario para capturar una receta nueva, sin perder la lista de recetas anteriores. */
   nuevaReceta(): void {
     this.reiniciarFormularioRecetaVacio();
     this.refrescarVista();
@@ -667,7 +696,6 @@ export class AppComponent implements OnInit {
           this.exitoReceta = esActualizacion ? 'Receta actualizada con éxito.' : 'Receta guardada con éxito.';
           this.mostrarToast(this.exitoReceta, 'success');
 
-          // Actualiza la lista de recetas en memoria, sin volver a pedirla al backend.
           const idx = this.recetasPaciente.findIndex(r => r.id === response.id);
           if (idx !== -1) {
             this.recetasPaciente[idx] = response;
@@ -675,8 +703,6 @@ export class AppComponent implements OnInit {
             this.recetasPaciente = [response, ...this.recetasPaciente];
           }
 
-          // Si es una receta nueva, ahora que ya tiene ID, le asignamos
-          // su folio (ID con ceros a la izquierda) con una petición extra.
           if (!esActualizacion && response.id) {
             const folioCalculado = this.formatFolio(response.id);
             const dtoConFolio: RecetaDTO = { ...dto, folio: folioCalculado };
@@ -723,7 +749,6 @@ export class AppComponent implements OnInit {
     return `${dia}/${mes}/${anio}`;
   }
 
-  /** Arma el RecetaDTO exactamente igual que guardarReceta(), para reusarlo también al generar el PDF. */
   private construirRecetaDto(): RecetaDTO {
     const [anio, mes, dia] = this.receta.fecha
       ? this.receta.fecha.split('-')
@@ -756,7 +781,6 @@ export class AppComponent implements OnInit {
     };
   }
 
-  /** Dispara la descarga de un blob (el PDF) con el nombre de archivo que mande el backend, o uno por defecto. */
   private descargarBlob(blob: Blob, headers: { get(name: string): string | null }, nombreDefecto: string): void {
     let nombreArchivo = nombreDefecto;
     const disposition = headers.get('content-disposition') ?? headers.get('Content-Disposition');
@@ -776,11 +800,6 @@ export class AppComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
-  /**
-   * Cuando la petición se hace con responseType 'blob', si el backend responde un error (400, 500),
-   * Angular entrega ese error también como Blob (no como JSON), así que hay que leerlo aparte
-   * antes de poder mostrar el mensaje real del backend en el Swal.
-   */
   private async mostrarErrorBackendDesdeBlob(err: any, mensajeDefault: string): Promise<void> {
     let cuerpo: any = err?.error;
     if (cuerpo instanceof Blob) {
@@ -796,7 +815,6 @@ export class AppComponent implements OnInit {
 
   guardandoPdfReceta = false;
 
-  /** Genera y descarga el PDF de la receta actual usando el backend (/api/expedientes/receta-medica). */
   imprimirReceta(): void {
     if (!this.pacienteActivoId) {
       this.mostrarToast('Selecciona un paciente antes de generar el PDF.', 'error');
@@ -879,7 +897,6 @@ export class AppComponent implements OnInit {
   errorHistorial = '';
   exitoHistorial = '';
 
-  /** Busca si el paciente ya tiene historia(s) clínica(s) guardadas; si sí, carga la más reciente. Si no, deja el form vacío. */
   cargarHistorialExistente(pacienteId: number): void {
     this.historialService.listarPorPaciente(pacienteId).subscribe({
       next: (data) => {
@@ -920,7 +937,6 @@ export class AppComponent implements OnInit {
         followUpAppointment: { ...h.doctorNotes.followUpAppointment }
       }
     };
-    // La info del paciente siempre refleja la ficha actual (campos bloqueados), no el snapshot guardado.
     if (this.pacienteActivo) {
       this.sincronizarInfoPacienteEnHistorial(this.pacienteActivo);
     }
@@ -1030,7 +1046,6 @@ export class AppComponent implements OnInit {
 
   guardandoPdfHistorial = false;
 
-  /** Genera y descarga el PDF de la historia clínica actual usando el backend (/api/expedientes/historia-clinica). */
   imprimirHistoria(): void {
     if (!this.pacienteActivoId) {
       this.mostrarToast('Selecciona un paciente antes de generar el PDF.', 'error');
