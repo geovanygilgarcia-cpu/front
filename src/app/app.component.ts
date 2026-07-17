@@ -358,40 +358,40 @@ export class AppComponent implements OnInit {
     });
   }
 
-  eliminarPacienteActivo(): void {
-    if (!this.pacienteActivoId) return;
+eliminarPacienteActivo(): void {
+  if (!this.pacienteActivoId) return;
 
-    const paciente = this.pacienteActivo;
-    const nombre = paciente ? paciente.nombreCompleto : 'este paciente';
+  const paciente = this.pacienteActivo;
+  const nombre = paciente ? paciente.nombreCompleto : 'este paciente';
 
-    this.confirmar(
-      '¿Eliminar paciente?',
-      `¿Seguro que quieres eliminar a "${nombre}"? Esta acción no se puede deshacer.`,
-      'Sí, eliminar'
-    ).then(confirmado => {
-      if (!confirmado) return;
+  this.confirmar(
+    '¿Eliminar paciente?',
+    `¿Seguro que quieres eliminar a "${nombre}"? Esta acción también eliminará su historia clínica y todas sus recetas guardadas. Esta acción no se puede deshacer.`,
+    'Sí, eliminar todo'
+  ).then(confirmado => {
+    if (!confirmado) return;
 
-      this.eliminandoPaciente = true;
-      this.refrescarVista();
+    this.eliminandoPaciente = true;
+    this.refrescarVista();
 
-      this.pacienteService.eliminar(this.pacienteActivoId!).subscribe({
-        next: () => {
-          this.eliminandoPaciente = false;
-          this.pacienteActivoId = null;
-          this.limpiarFormularioPaciente();
-          this.cargarPacientes();
-          this.mostrarToast(`Paciente "${nombre}" eliminado con éxito.`, 'success');
-          this.refrescarVista();
-        },
-        error: (err) => {
-          this.eliminandoPaciente = false;
-          this.mostrarToast('No se pudo eliminar el paciente.', 'error');
-          this.refrescarVista();
-          console.error(err);
-        }
-      });
+    this.pacienteService.eliminar(this.pacienteActivoId!).subscribe({
+      next: () => {
+        this.eliminandoPaciente = false;
+        this.pacienteActivoId = null;
+        this.limpiarFormularioPaciente();
+        this.cargarPacientes();
+        this.mostrarToast(`Paciente "${nombre}" y su expediente completo fueron eliminados.`, 'success');
+        this.refrescarVista();
+      },
+      error: (err) => {
+        this.eliminandoPaciente = false;
+        this.mostrarToast('No se pudo eliminar el paciente.', 'error');
+        this.refrescarVista();
+        console.error(err);
+      }
     });
-  }
+  });
+}
 
   limpiarFormularioPaciente(): void {
     this.pacienteNuevo = {
