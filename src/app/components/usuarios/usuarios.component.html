@@ -1,0 +1,178 @@
+<div class="usuarios-page">
+
+  <div class="page-head">
+    <div>
+      <button class="btn-back" (click)="cerrarSesion()">← Cerrar sesión</button>
+      <h1>Usuarios del sistema</h1>
+      <p class="sub">Da de alta doctores, enfermeras, recepción y otros administradores.</p>
+    </div>
+    <button class="btn primary" (click)="abrirModalNuevo()">+ Nuevo usuario</button>
+  </div>
+
+  <div class="card">
+
+    <div class="toolbar">
+      <input
+        class="search-input"
+        type="text"
+        placeholder="Buscar por nombre o correo..."
+        [(ngModel)]="filtroTexto">
+
+      <div class="chip-group">
+        <button class="chip" [class.on]="filtroRol === ''" (click)="cambiarFiltroRol('')">Todos</button>
+        <button class="chip" [class.on]="filtroRol === 'MEDICO'" (click)="cambiarFiltroRol('MEDICO')">Médicos</button>
+        <button class="chip" [class.on]="filtroRol === 'ENFERMERA'" (click)="cambiarFiltroRol('ENFERMERA')">Enfermería</button>
+        <button class="chip" [class.on]="filtroRol === 'RECEPCION'" (click)="cambiarFiltroRol('RECEPCION')">Recepción</button>
+        <button class="chip" [class.on]="filtroRol === 'ADMIN'" (click)="cambiarFiltroRol('ADMIN')">Admins</button>
+      </div>
+    </div>
+
+    <div class="status-msg" *ngIf="cargando">Cargando usuarios…</div>
+    <div class="status-msg error" *ngIf="error">{{ error }}</div>
+
+    <table class="tabla" *ngIf="!cargando && !error">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Correo</th>
+          <th>Rol</th>
+          <th>Cédula</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of usuariosFiltrados" [class.inactivo]="!u.activo">
+          <td>{{ u.nombreCompleto }}</td>
+          <td class="mono">{{ u.email }}</td>
+          <td><span class="tag">{{ etiquetaRol(u.rol) }}</span></td>
+          <td class="mono">{{ u.cedulaProfesional || '—' }}</td>
+          <td>
+            <span class="estado" [class.activo]="u.activo">
+              {{ u.activo ? 'Activo' : 'Dado de baja' }}
+            </span>
+          </td>
+          <td class="acciones">
+            <button class="btn-icon" (click)="abrirModalEditar(u)" title="Editar">Editar</button>
+            <button
+              class="btn-icon danger"
+              *ngIf="u.activo"
+              (click)="darDeBaja(u)"
+              [disabled]="eliminando === u.id"
+              title="Dar de baja">
+              {{ eliminando === u.id ? '...' : 'Dar de baja' }}
+            </button>
+            <button
+              class="btn-icon"
+              *ngIf="!u.activo"
+              (click)="reactivar(u)"
+              title="Reactivar">
+              Reactivar
+            </button>
+          </td>
+        </tr>
+        <tr *ngIf="usuariosFiltrados.length === 0">
+          <td colspan="6" class="status-msg">No hay usuarios que coincidan con la búsqueda.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== MODAL: NUEVO / EDITAR USUARIO ===== -->
+<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
+  <div class="modal modal-grande" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ tituloModal }}</h3>
+      <button class="modal-close" (click)="cerrarModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="seccion-titulo"><span class="n">01</span><h4>Rol y datos generales</h4></div>
+      <div class="grid cols-2">
+        <div class="field">
+          <label>Rol</label>
+          <select [(ngModel)]="form.rol">
+            <option *ngFor="let r of roles" [value]="r">{{ etiquetaRol(r) }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Nombre completo</label>
+          <input [(ngModel)]="form.nombreCompleto" placeholder="Ej. Dra. Ana López">
+        </div>
+      </div>
+
+      <div class="seccion-titulo"><span class="n">02</span><h4>Información profesional</h4></div>
+      <div class="grid cols-2" *ngIf="esMedico; else sinDatosProfesionales">
+        <div class="field">
+          <label>Cédula profesional</label>
+          <input [(ngModel)]="form.cedulaProfesional" placeholder="Ej. 12345678">
+        </div>
+        <div class="field">
+          <label>Especialidad</label>
+          <select
+            [ngModel]="especialidadSeleccionadaId"
+            (ngModelChange)="onCambiarEspecialidad($event)">
+            <option [ngValue]="null">Selecciona una especialidad...</option>
+            <option *ngFor="let e of especialidades" [ngValue]="e.id">{{ e.nombre }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid cols-2" *ngIf="esMedico" style="margin-top:14px;">
+        <div class="field" style="grid-column: span 2;">
+          <label>Subespecialidad (opcional)</label>
+          <select
+            [ngModel]="subespecialidadSeleccionadaId"
+            (ngModelChange)="onCambiarSubespecialidad($event)"
+            [disabled]="!especialidadSeleccionadaId">
+            <option [ngValue]="null">
+              {{ especialidadSeleccionadaId ? 'Selecciona una subespecialidad (opcional)...' : 'Primero elige una especialidad' }}
+            </option>
+            <option *ngFor="let s of subespecialidades" [ngValue]="s.id">{{ s.nombre }}</option>
+          </select>
+        </div>
+      </div>
+      <ng-template #sinDatosProfesionales>
+        <p class="nota-rol">Este rol no maneja cédula ni especialidad.</p>
+      </ng-template>
+
+      <div class="seccion-titulo"><span class="n">03</span><h4>Acceso</h4></div>
+      <div class="grid cols-2">
+        <div class="field">
+          <label>Correo</label>
+          <input type="email" [(ngModel)]="form.email" placeholder="correo@consultorio.com">
+        </div>
+        <div class="field">
+          <label>{{ esEdicion ? 'Nueva contraseña (opcional)' : 'Contraseña' }}</label>
+          <input type="password" [(ngModel)]="form.password" placeholder="Mínimo 8 caracteres">
+        </div>
+      </div>
+
+      <div class="field checkbox-field" style="margin-top:16px;" *ngIf="esEdicion">
+        <label class="checkbox-option">
+          <input type="checkbox" [(ngModel)]="form.activo">
+          Usuario activo (puede iniciar sesión)
+        </label>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn primary" (click)="guardar()" [disabled]="guardando">
+        {{ guardando ? 'Guardando...' : (esEdicion ? 'Actualizar' : 'Crear') + ' ' + etiquetaRol(form.rol) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-container">
+  <div
+    class="toast"
+    *ngFor="let toast of toasts"
+    [class.success]="toast.tipo === 'success'"
+    [class.error]="toast.tipo === 'error'">
+    <span>{{ toast.mensaje }}</span>
+  </div>
+</div>

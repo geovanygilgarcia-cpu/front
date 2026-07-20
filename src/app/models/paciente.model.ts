@@ -10,6 +10,8 @@ export interface Paciente {
   email: string | null;
   genero: string | null;
   contactoEmergencia: string | null;
+  medicoId: string | null;
+  medicoNombre: string | null;
   createdAt: string;
 }
 
