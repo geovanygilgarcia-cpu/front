@@ -69,6 +69,7 @@
       </div>
       <div class="ph-actions">
         <button class="btn" (click)="abrirModalEditarPaciente()">Editar paciente</button>
+        <button class="btn" (click)="abrirModalReferencia()">Referir a otro médico</button>
         <button class="btn coral" (click)="eliminarPacienteActivo()" [disabled]="eliminandoPaciente">
           {{ eliminandoPaciente ? 'Eliminando...' : 'Eliminar paciente' }}
         </button>
@@ -445,6 +446,49 @@
   </div>
 </div>
 
+<!-- ===== MODAL: REFERIR PACIENTE A OTRO MÉDICO ===== -->
+<div class="modal-overlay" *ngIf="modalReferenciaAbierto" (click)="cerrarModalReferencia()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Referir paciente</h3>
+      <button class="modal-close" (click)="cerrarModalReferencia()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="error-banner" *ngIf="errorReferencia">{{ errorReferencia }}</div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Paciente</label>
+        <input [value]="pacienteActivo?.nombreCompleto ?? ''" [disabled]="true">
+      </div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>Referir a</label>
+        <select [(ngModel)]="referenciaForm.medicoDestinoId" [disabled]="cargandoMedicosDisponibles">
+          <option value="" disabled>
+            {{ cargandoMedicosDisponibles ? 'Cargando médicos...' : 'Selecciona un médico...' }}
+          </option>
+          <option *ngFor="let m of medicosDisponibles" [value]="m.id">
+            {{ m.nombreCompleto }}<ng-container *ngIf="m.especialidad"> — {{ m.especialidad }}</ng-container>
+          </option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Motivo de la referencia</label>
+        <textarea rows="3" [(ngModel)]="referenciaForm.motivo" placeholder="Ej. Dolor de rodilla, sospecha de lesión de menisco"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" (click)="cerrarModalReferencia()">Cancelar</button>
+      <button class="btn primary" (click)="guardarReferencia()" [disabled]="guardandoReferencia">
+        {{ guardandoReferencia ? 'Enviando...' : 'Enviar referencia' }}
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== TOASTS ===== -->
 <div class="toast-container">
   <div
@@ -469,6 +513,46 @@
     </span>
   </div>
   <div class="session-actions">
+    <div class="notif-wrap" *ngIf="usuarioActual?.rol === 'MEDICO'">
+      <button class="notif-bell" (click)="toggleNotificaciones()" title="Referencias pendientes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="notif-badge" *ngIf="referenciasPendientes.length > 0">{{ referenciasPendientes.length }}</span>
+      </button>
+
+      <div class="notif-panel" *ngIf="panelNotificacionesAbierto">
+        <div class="notif-panel-title">Referencias pendientes</div>
+
+        <div class="notif-empty" *ngIf="referenciasPendientes.length === 0">
+          No tienes referencias pendientes.
+        </div>
+
+        <div class="notif-item" *ngFor="let r of referenciasPendientes">
+          <div class="notif-item-main">
+            <div class="notif-item-name">{{ r.pacienteNombre }}</div>
+            <div class="notif-item-sub">Referido por {{ r.medicoOrigenNombre }}</div>
+            <div class="notif-item-motivo" *ngIf="r.motivo">{{ r.motivo }}</div>
+          </div>
+          <div class="notif-item-actions">
+            <button
+              class="notif-btn accept"
+              (click)="aceptarReferencia(r)"
+              [disabled]="resolviendoReferenciaId === r.id">
+              {{ resolviendoReferenciaId === r.id ? '...' : 'Aceptar' }}
+            </button>
+            <button
+              class="notif-btn reject"
+              (click)="rechazarReferencia(r)"
+              [disabled]="resolviendoReferenciaId === r.id">
+              {{ resolviendoReferenciaId === r.id ? '...' : 'Rechazar' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button class="session-link" *ngIf="usuarioActual?.rol === 'ADMIN'" (click)="irAUsuarios()">Gestionar usuarios</button>
     <button class="session-logout" (click)="cerrarSesion()">Cerrar sesión</button>
   </div>

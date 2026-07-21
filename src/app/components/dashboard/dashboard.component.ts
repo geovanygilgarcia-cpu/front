@@ -13,6 +13,10 @@ import { MedicamentoService } from '../../services/medicamentos.service';
 import { Medicamento } from '../../models/medicamento.model';
 import { AuthService } from '../../services/login/auth.service';
 import { UsuarioSesion } from '../../models/login/auth.model';
+import { UsuarioService } from '../../services/usuarios/usuario.service';
+import { UsuarioResponse } from '../../models/usuarios/usuario.model';
+import { ReferenciaService } from '../../services/referencias.service';
+import { ReferenciaRequest, ReferenciaResponse } from '../../models/referencia.model';
 import Swal from 'sweetalert2';
 
 type TabId = 'historia' | 'consultas' | 'recetas';
@@ -64,12 +68,15 @@ export class DashboardComponent implements OnInit {
   private pdfService = inject(PdfService);
   private medicamentoService = inject(MedicamentoService);
   private authService = inject(AuthService);
+  private usuarioService = inject(UsuarioService);
+  private referenciaService = inject(ReferenciaService);
   private router = inject(Router);
 
   ngOnInit(): void {
     this.cargarPacientes();
     this.cargarCatalogoMedicamentos();
     this.receta.firma = this.medicoActual;
+    this.cargarReferenciasPendientes();
   }
 
   /**
@@ -501,6 +508,194 @@ eliminarPacienteActivo(): void {
 
   get infoPacienteBloqueada(): boolean {
     return !!this.pacienteActivoId;
+  }
+
+  // ==================================================================
+  // ===== REFERENCIAS — referir paciente a otro médico =================
+  // ==================================================================
+
+  /** Catálogo de médicos activos disponibles para referir (se carga bajo demanda). */
+  medicosDisponibles: UsuarioResponse[] = [];
+  cargandoMedicosDisponibles = false;
+
+  modalReferenciaAbierto = false;
+  referenciaForm = {
+    medicoDestinoId: '',
+    motivo: ''
+  };
+  guardandoReferencia = false;
+  errorReferencia = '';
+
+  abrirModalReferencia(): void {
+    if (!this.pacienteActivoId) return;
+
+    this.referenciaForm = { medicoDestinoId: '', motivo: '' };
+    this.errorReferencia = '';
+    this.modalReferenciaAbierto = true;
+
+    if (this.medicosDisponibles.length === 0) {
+      this.cargarMedicosDisponibles();
+    }
+  }
+
+  cerrarModalReferencia(): void {
+    this.modalReferenciaAbierto = false;
+  }
+
+  private cargarMedicosDisponibles(): void {
+    this.cargandoMedicosDisponibles = true;
+    this.refrescarVista();
+
+    this.usuarioService.listar('MEDICO').subscribe({
+      next: (data: UsuarioResponse[]) => {
+        this.medicosDisponibles = data.filter(u => u.activo);
+        this.cargandoMedicosDisponibles = false;
+        this.refrescarVista();
+      },
+      error: (err: any) => {
+        this.cargandoMedicosDisponibles = false;
+        this.errorReferencia = 'No se pudo cargar la lista de médicos.';
+        console.error(err);
+        this.refrescarVista();
+      }
+    });
+  }
+
+  guardarReferencia(): void {
+    this.errorReferencia = '';
+
+    if (!this.pacienteActivoId || !this.pacienteActivo) {
+      this.errorReferencia = 'Selecciona un paciente antes de referirlo.';
+      return;
+    }
+
+    if (!this.referenciaForm.medicoDestinoId) {
+      this.errorReferencia = 'Selecciona a qué médico quieres referir al paciente.';
+      return;
+    }
+
+    const medicoDestino = this.medicosDisponibles.find(
+      m => m.id === this.referenciaForm.medicoDestinoId
+    );
+    if (!medicoDestino) {
+      this.errorReferencia = 'El médico seleccionado ya no está disponible.';
+      return;
+    }
+
+    const nombrePaciente = this.pacienteActivo.nombreCompleto;
+    const nombreMedico = medicoDestino.nombreCompleto;
+
+    this.confirmar(
+      '¿Referir paciente?',
+      `Se enviará una referencia de "${nombrePaciente}" a "${nombreMedico}". El médico deberá aceptarla para que el paciente pase a su cuidado.`,
+      'Sí, referir'
+    ).then(confirmado => {
+      if (!confirmado) return;
+
+      this.guardandoReferencia = true;
+      this.refrescarVista();
+
+      const dto: ReferenciaRequest = {
+        pacienteId: this.pacienteActivoId!,
+        medicoDestinoId: medicoDestino.id,
+        medicoDestinoNombre: medicoDestino.nombreCompleto,
+        motivo: this.referenciaForm.motivo.trim() || undefined
+      };
+
+      this.referenciaService.crear(dto).subscribe({
+        next: () => {
+          this.guardandoReferencia = false;
+          this.modalReferenciaAbierto = false;
+          this.mostrarToast(`Paciente referido a "${nombreMedico}". Queda pendiente de su aceptación.`, 'success');
+          this.refrescarVista();
+        },
+        error: (err) => {
+          this.guardandoReferencia = false;
+          this.refrescarVista();
+          this.mostrarErrorBackend(err, 'No se pudo referir al paciente.');
+          console.error(err);
+        }
+      });
+    });
+  }
+
+  // ---- Notificaciones: referencias pendientes dirigidas a mí ----
+
+  referenciasPendientes: ReferenciaResponse[] = [];
+  panelNotificacionesAbierto = false;
+  resolviendoReferenciaId: number | null = null;
+
+  cargarReferenciasPendientes(): void {
+    this.referenciaService.listarPendientes().subscribe({
+      next: (data: ReferenciaResponse[]) => {
+        this.referenciasPendientes = data;
+        this.refrescarVista();
+      },
+      error: (err: any) => {
+        console.error('No se pudo cargar las referencias pendientes:', err);
+      }
+    });
+  }
+
+  toggleNotificaciones(): void {
+    this.panelNotificacionesAbierto = !this.panelNotificacionesAbierto;
+  }
+
+  aceptarReferencia(r: ReferenciaResponse): void {
+    this.confirmar(
+      '¿Aceptar referencia?',
+      `"${r.pacienteNombre}" pasará a ser tu paciente. Dejará de aparecer en la lista de "${r.medicoOrigenNombre}".`,
+      'Sí, aceptar'
+    ).then(confirmado => {
+      if (!confirmado) return;
+
+      this.resolviendoReferenciaId = r.id;
+      this.refrescarVista();
+
+      this.referenciaService.aceptar(r.id).subscribe({
+        next: () => {
+          this.resolviendoReferenciaId = null;
+          this.referenciasPendientes = this.referenciasPendientes.filter(x => x.id !== r.id);
+          this.mostrarToast(`"${r.pacienteNombre}" ahora es tu paciente.`, 'success');
+          this.cargarPacientes();
+          this.refrescarVista();
+        },
+        error: (err) => {
+          this.resolviendoReferenciaId = null;
+          this.refrescarVista();
+          this.mostrarErrorBackend(err, 'No se pudo aceptar la referencia.');
+          console.error(err);
+        }
+      });
+    });
+  }
+
+  rechazarReferencia(r: ReferenciaResponse): void {
+    this.confirmar(
+      '¿Rechazar referencia?',
+      `"${r.pacienteNombre}" se quedará con "${r.medicoOrigenNombre}".`,
+      'Sí, rechazar'
+    ).then(confirmado => {
+      if (!confirmado) return;
+
+      this.resolviendoReferenciaId = r.id;
+      this.refrescarVista();
+
+      this.referenciaService.rechazar(r.id).subscribe({
+        next: () => {
+          this.resolviendoReferenciaId = null;
+          this.referenciasPendientes = this.referenciasPendientes.filter(x => x.id !== r.id);
+          this.mostrarToast('Referencia rechazada.', 'success');
+          this.refrescarVista();
+        },
+        error: (err) => {
+          this.resolviendoReferenciaId = null;
+          this.refrescarVista();
+          this.mostrarErrorBackend(err, 'No se pudo rechazar la referencia.');
+          console.error(err);
+        }
+      });
+    });
   }
 
   // ==================================================================
