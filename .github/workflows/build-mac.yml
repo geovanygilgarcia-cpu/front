@@ -1,0 +1,32 @@
+name: Build macOS App
+
+on:
+  workflow_dispatch:   # te permite ejecutarlo manualmente desde GitHub
+  push:
+    tags:
+      - 'v*'            # también se dispara si haces push de un tag tipo v1.0.0
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Compilar app Angular + Electron (.dmg)
+        run: npm run electron:build
+
+      - name: Subir el .dmg como artefacto
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExpMedic-Mac
+          path: dist/*.dmg
