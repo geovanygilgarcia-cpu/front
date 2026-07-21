@@ -69,6 +69,7 @@ export class DashboardComponent implements OnInit {
   ngOnInit(): void {
     this.cargarPacientes();
     this.cargarCatalogoMedicamentos();
+    this.receta.firma = this.medicoActual;
   }
 
   /**
@@ -106,6 +107,30 @@ export class DashboardComponent implements OnInit {
     };
     const rol = this.usuarioActual?.rol;
     return rol ? (etiquetas[rol] ?? rol) : '';
+  }
+
+  /**
+   * Devuelve "Dr. Nombre" / "Dra. Nombre" para médicos (según su sexo),
+   * o simplemente el nombre completo para el resto de roles.
+   */
+  get tituloUsuarioActual(): string {
+    const usuario = this.usuarioActual;
+    if (!usuario) return '';
+
+    const nombre = usuario.nombreCompleto ?? '';
+
+    if (usuario.rol !== 'MEDICO') {
+      return nombre;
+    }
+
+    if (usuario.sexo === 'F') {
+      return `Dra. ${nombre}`;
+    }
+    if (usuario.sexo === 'M') {
+      return `Dr. ${nombre}`;
+    }
+    // Sin sexo registrado: usamos la forma neutra "Dr(a)."
+    return `Dr(a). ${nombre}`;
   }
 
   irAUsuarios(): void {
@@ -532,7 +557,13 @@ eliminarPacienteActivo(): void {
   // ===== RECETA — conectada a POST/PUT /api/recetas ===================
   // ==================================================================
 
-  readonly medicoFijo = 'Dr. Fredy Gil Garcia';
+  /**
+   * Nombre del médico que expide la receta, tomado del usuario logueado
+   * en el momento de generarla ("Dr. Nombre" / "Dra. Nombre" según su sexo).
+   */
+  get medicoActual(): string {
+    return this.tituloUsuarioActual;
+  }
 
   receta: RecetaForm = {
     folio: '',
@@ -550,7 +581,7 @@ eliminarPacienteActivo(): void {
     alergias: '',
     idx: '',
     proximaCita: '',
-    firma: this.medicoFijo
+    firma: ''
   };
 
   medicamentos: MedicamentoLinea[] = [
@@ -665,7 +696,7 @@ eliminarPacienteActivo(): void {
       alergias: r.signosVitales?.alergias ?? '',
       idx: r.idx,
       proximaCita: this.convertirFechaDDMMYYYYaISO(r.proximaCita),
-      firma: this.medicoFijo
+      firma: this.medicoActual
     };
     this.medicamentos = r.diagnosticoTratamiento
       ? r.diagnosticoTratamiento.split('\n').filter(l => l.trim()).map(linea => {
@@ -687,7 +718,7 @@ eliminarPacienteActivo(): void {
       edad: this.pacienteActivo?.edad != null ? String(this.pacienteActivo.edad) : '',
       fecha: '',
       peso: '', talla: '', ta: '', fc: '', fr: '', temp: '', sato2: '', imc: '', alergias: '',
-      idx: '', proximaCita: '', firma: this.medicoFijo
+      idx: '', proximaCita: '', firma: this.medicoActual
     };
     this.medicamentos = [{ medicamento: '', indicacion: '' }];
   }

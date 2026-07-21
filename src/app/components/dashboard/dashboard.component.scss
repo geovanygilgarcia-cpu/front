@@ -838,6 +838,23 @@
   z-index: 50;
 }
 
+.session-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  line-height: 1.35;
+}
+
+.session-name {
+  font-weight: 500;
+  color: #EAF3F1;
+}
+
+.session-specialty {
+  font-size: 10.5px;
+  color: #9FC0BC;
+}
+
 .session-actions {
   display: flex;
   align-items: center;

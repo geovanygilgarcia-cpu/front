@@ -44,7 +44,10 @@ export class AuthService {
     localStorage.setItem(TOKEN_KEY, respuesta.token);
     const usuario: UsuarioSesion = {
       nombreCompleto: respuesta.nombreCompleto,
-      rol: respuesta.rol
+      rol: respuesta.rol,
+      sexo: respuesta.sexo,
+      especialidad: respuesta.especialidad,
+      subespecialidad: respuesta.subespecialidad
     };
     localStorage.setItem(USUARIO_KEY, JSON.stringify(usuario));
     this.usuarioActual.set(usuario);

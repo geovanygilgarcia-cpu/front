@@ -5,10 +5,13 @@ export interface LoginRequest {
 
 export type Rol = 'ADMIN' | 'MEDICO' | 'ENFERMERA' | 'RECEPCION';
 
+export type Sexo = 'M' | 'F';
+
 export interface LoginResponse {
   token: string;
   rol: Rol;
   nombreCompleto: string;
+  sexo?: Sexo;
   especialidad?: string;
   subespecialidad?: string;
 }
@@ -16,6 +19,7 @@ export interface LoginResponse {
 export interface UsuarioSesion {
   nombreCompleto: string;
   rol: Rol;
+  sexo?: Sexo;
   especialidad?: string;
   subespecialidad?: string;
 }

@@ -1,9 +1,12 @@
 import { Rol } from '../login/auth.model';
 
+export type Sexo = 'M' | 'F';
+
 export interface UsuarioRequest {
   email: string;
   password: string;
   nombreCompleto: string;
+  sexo?: Sexo;
   cedulaProfesional?: string;
   especialidad?: string;
   subespecialidad?: string;
@@ -15,6 +18,7 @@ export interface UsuarioUpdateRequest {
   // null/omitido = no cambiar la contraseña actual (así lo espera el backend)
   password?: string | null;
   nombreCompleto: string;
+  sexo?: Sexo;
   cedulaProfesional?: string;
   especialidad?: string;
   subespecialidad?: string;
@@ -26,6 +30,7 @@ export interface UsuarioResponse {
   id: string;
   email: string;
   nombreCompleto: string;
+  sexo?: Sexo;
   cedulaProfesional?: string;
   especialidad?: string;
   subespecialidad?: string;

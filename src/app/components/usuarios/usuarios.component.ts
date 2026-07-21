@@ -5,7 +5,7 @@ import Swal from 'sweetalert2';
 import { UsuarioService } from '../../services/usuarios/usuario.service';
 import { AuthService } from '../../services/login/auth.service';
 import { Rol } from '../../models/login/auth.model';
-import { UsuarioRequest, UsuarioUpdateRequest, UsuarioResponse } from '../../models/usuarios/usuario.model';
+import { UsuarioRequest, UsuarioUpdateRequest, UsuarioResponse, Sexo } from '../../models/usuarios/usuario.model';
 import { EspecialidadService } from '../../services/usuarios/especialidad.service';
 import { Especialidad, Subespecialidad } from '../../models/usuarios/especialidad.model';
 
@@ -16,6 +16,7 @@ interface UsuarioForm {
   email: string;
   password: string;
   nombreCompleto: string;
+  sexo: Sexo | '';
   cedulaProfesional: string;
   especialidad: string;
   subespecialidad: string;
@@ -27,6 +28,7 @@ const FORM_VACIO: UsuarioForm = {
   email: '',
   password: '',
   nombreCompleto: '',
+  sexo: '',
   cedulaProfesional: '',
   especialidad: '',
   subespecialidad: '',
@@ -49,6 +51,7 @@ export class UsuariosComponent implements OnInit {
   private cdr = inject(ChangeDetectorRef);
 
   readonly roles: Rol[] = ['ADMIN', 'MEDICO', 'ENFERMERA', 'RECEPCION'];
+  readonly sexos: Sexo[] = ['M', 'F'];
 
   ngOnInit(): void {
     this.cargarUsuarios();
@@ -285,6 +288,7 @@ export class UsuariosComponent implements OnInit {
       email: usuario.email,
       password: '',
       nombreCompleto: usuario.nombreCompleto,
+      sexo: usuario.sexo ?? '',
       cedulaProfesional: usuario.cedulaProfesional ?? '',
       especialidad: usuario.especialidad ?? '',
       subespecialidad: usuario.subespecialidad ?? '',
@@ -300,6 +304,11 @@ export class UsuariosComponent implements OnInit {
 
   cerrarModal(): void {
     this.modalAbierto = false;
+  }
+
+  /** Convierte '' (opción "Selecciona...") a undefined para que calce con el tipo del modelo. */
+  private normalizarSexo(sexo: Sexo | ''): Sexo | undefined {
+    return sexo === '' ? undefined : sexo;
   }
 
   guardar(): void {
@@ -321,6 +330,7 @@ export class UsuariosComponent implements OnInit {
         email: this.form.email.trim(),
         password: this.form.password.trim() ? this.form.password.trim() : null,
         nombreCompleto: this.form.nombreCompleto.trim(),
+        sexo: this.normalizarSexo(this.form.sexo),
         cedulaProfesional: this.form.cedulaProfesional.trim(),
         especialidad: this.esMedico ? this.form.especialidad.trim() : '',
         subespecialidad: this.esMedico ? this.form.subespecialidad.trim() : '',
@@ -346,6 +356,7 @@ export class UsuariosComponent implements OnInit {
         email: this.form.email.trim(),
         password: this.form.password.trim(),
         nombreCompleto: this.form.nombreCompleto.trim(),
+        sexo: this.normalizarSexo(this.form.sexo),
         cedulaProfesional: this.form.cedulaProfesional.trim(),
         especialidad: this.esMedico ? this.form.especialidad.trim() : '',
         subespecialidad: this.esMedico ? this.form.subespecialidad.trim() : '',
@@ -414,6 +425,7 @@ export class UsuariosComponent implements OnInit {
       email: usuario.email,
       password: null,
       nombreCompleto: usuario.nombreCompleto,
+      sexo: usuario.sexo,
       cedulaProfesional: usuario.cedulaProfesional ?? '',
       especialidad: usuario.especialidad ?? '',
       subespecialidad: usuario.subespecialidad ?? '',
@@ -441,5 +453,11 @@ export class UsuariosComponent implements OnInit {
       RECEPCION: 'Recepción'
     };
     return etiquetas[rol];
+  }
+
+  etiquetaSexo(sexo: Sexo | '' | undefined): string {
+    if (sexo === 'M') return 'Masculino';
+    if (sexo === 'F') return 'Femenino';
+    return '—';
   }
 }

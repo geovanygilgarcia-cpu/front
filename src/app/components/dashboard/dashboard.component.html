@@ -46,7 +46,7 @@
         Sin resultados para:
       </li>
       <li *ngIf="pacientesFiltrados.length === 0" class="side-status">
-        Dra. {{ usuarioActual?.nombreCompleto }}
+        {{ tituloUsuarioActual }}
       </li>
     </ul>
 
@@ -459,15 +459,15 @@
 
 <!-- Barra superior para cerrar sesión -->
 <div class="session-bar">
-  <span>
-    {{ usuarioActual?.nombreCompleto }} · {{ etiquetaRolActual }}
-    <ng-container *ngIf="usuarioActual?.especialidad">
-      · "{{ usuarioActual?.especialidad }}"
-    </ng-container>
-    <ng-container *ngIf="usuarioActual?.subespecialidad">
-      ({{ usuarioActual?.subespecialidad }})
-    </ng-container>
-  </span>
+  <div class="session-info">
+    <span class="session-name">{{ tituloUsuarioActual }} · {{ etiquetaRolActual }}</span>
+    <span class="session-specialty" *ngIf="usuarioActual?.especialidad">
+      {{ usuarioActual?.especialidad }}
+      <ng-container *ngIf="usuarioActual?.subespecialidad">
+        · {{ usuarioActual?.subespecialidad }}
+      </ng-container>
+    </span>
+  </div>
   <div class="session-actions">
     <button class="session-link" *ngIf="usuarioActual?.rol === 'ADMIN'" (click)="irAUsuarios()">Gestionar usuarios</button>
     <button class="session-logout" (click)="cerrarSesion()">Cerrar sesión</button>

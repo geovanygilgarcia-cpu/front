@@ -36,6 +36,7 @@
           <th>Nombre</th>
           <th>Correo</th>
           <th>Rol</th>
+          <th>Sexo</th>
           <th>Cédula</th>
           <th>Estado</th>
           <th></th>
@@ -46,6 +47,7 @@
           <td>{{ u.nombreCompleto }}</td>
           <td class="mono">{{ u.email }}</td>
           <td><span class="tag">{{ etiquetaRol(u.rol) }}</span></td>
+          <td>{{ etiquetaSexo(u.sexo) }}</td>
           <td class="mono">{{ u.cedulaProfesional || '—' }}</td>
           <td>
             <span class="estado" [class.activo]="u.activo">
@@ -72,7 +74,7 @@
           </td>
         </tr>
         <tr *ngIf="usuariosFiltrados.length === 0">
-          <td colspan="6" class="status-msg">No hay usuarios que coincidan con la búsqueda.</td>
+          <td colspan="7" class="status-msg">No hay usuarios que coincidan con la búsqueda.</td>
         </tr>
       </tbody>
     </table>
@@ -98,8 +100,15 @@
           </select>
         </div>
         <div class="field">
+          <label>Sexo</label>
+          <select [(ngModel)]="form.sexo">
+            <option value="">Selecciona...</option>
+            <option *ngFor="let s of sexos" [value]="s">{{ etiquetaSexo(s) }}</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column: span 2;">
           <label>Nombre completo</label>
-          <input [(ngModel)]="form.nombreCompleto" placeholder="Ej. Dra. Ana López">
+          <input [(ngModel)]="form.nombreCompleto" placeholder="Ej. Ana López">
         </div>
       </div>
 
