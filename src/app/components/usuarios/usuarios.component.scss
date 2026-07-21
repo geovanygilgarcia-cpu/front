@@ -1,21 +1,42 @@
 .usuarios-page {
-  padding: 26px 34px 60px;
+  padding: 30px clamp(20px, 4vw, 42px) 60px;
   max-width: 1180px;
   margin: 0 auto;
 }
 
+.head-links {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
 .btn-back {
-  background: none;
-  border: none;
+  background: rgba(47, 111, 107, .08);
+  border: 1px solid rgba(47, 111, 107, .16);
   color: var(--teal-dark);
   font-family: inherit;
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 700;
   cursor: pointer;
-  padding: 0;
-  margin-bottom: 10px;
+  padding: 7px 11px;
+  border-radius: 8px;
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    background: var(--teal-pale);
+    border-color: #CFE2DF;
+  }
+
+  &.danger {
+    background: rgba(192, 96, 74, .1);
+    border-color: rgba(192, 96, 74, .22);
+    color: #8C4633;
+
+    &:hover {
+      background: var(--coral-pale);
+      border-color: #E7CCC3;
+    }
+  }
 }
 
 .page-head {
@@ -28,8 +49,8 @@
 
   h1 {
     font-family: 'Source Serif 4', serif;
-    font-size: 26px;
-    font-weight: 600;
+    font-size: 30px;
+    font-weight: 700;
     margin: 0 0 4px;
     color: var(--ink);
   }
@@ -44,33 +65,40 @@
 .btn {
   font-family: inherit;
   font-size: 13px;
-  font-weight: 500;
-  padding: 9px 15px;
+  font-weight: 600;
+  padding: 10px 15px;
   border-radius: 8px;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
   cursor: pointer;
-  transition: .15s ease;
+  box-shadow: 0 1px 2px rgba(22, 36, 47, .04);
+  transition: transform .15s ease, border-color .15s ease, color .15s ease, background .15s ease, box-shadow .15s ease;
 
-  &:hover { border-color: var(--teal); color: var(--teal-dark); }
+  &:hover {
+    border-color: var(--teal);
+    color: var(--teal-dark);
+    box-shadow: 0 10px 22px rgba(22, 36, 47, .08);
+    transform: translateY(-1px);
+  }
 
   &.primary {
-    background: var(--teal);
+    background: linear-gradient(135deg, var(--teal), #3D9886);
     border-color: var(--teal);
     color: #fff;
-    &:hover { background: var(--teal-dark); }
+    box-shadow: 0 12px 28px rgba(47, 111, 107, .2);
+    &:hover { background: linear-gradient(135deg, var(--teal-dark), var(--teal)); color: #fff; }
   }
 
   &:disabled { opacity: .6; cursor: not-allowed; }
 }
 
 .card {
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 22px 24px;
-  box-shadow: var(--shadow);
+  background: rgba(255, 254, 251, .94);
+  border: 1px solid rgba(215, 224, 223, .88);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 18px 46px rgba(22, 36, 47, .08);
 }
 
 .toolbar {
@@ -91,6 +119,7 @@
   min-width: 220px;
   flex: 1;
   max-width: 320px;
+  transition: border-color .15s ease, box-shadow .15s ease;
 
   &:focus {
     outline: none;
@@ -108,7 +137,7 @@
 .chip {
   font-family: inherit;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 6px 12px;
   border-radius: 100px;
   border: 1px solid var(--line);
@@ -117,7 +146,7 @@
   cursor: pointer;
 
   &:hover { border-color: var(--teal); }
-  &.on { background: var(--teal-pale); border-color: #CFE2DF; color: var(--teal-dark); font-weight: 600; }
+  &.on { background: var(--teal-dark); border-color: var(--teal-dark); color: #fff; font-weight: 700; }
 }
 
 .status-msg {
@@ -143,12 +172,21 @@
     font-weight: 600;
     padding: 10px 12px;
     border-bottom: 1px solid var(--line);
+    background: rgba(228, 238, 236, .48);
   }
 
   tbody td {
     padding: 12px;
     border-bottom: 1px solid var(--line-soft);
     color: var(--ink);
+  }
+
+  tbody tr {
+    transition: background .14s ease;
+
+    &:hover {
+      background: rgba(228, 238, 236, .38);
+    }
   }
 
   tbody tr.inactivo td {
@@ -202,18 +240,19 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(22, 36, 47, .45);
+  background: rgba(22, 36, 47, .5);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   padding: 20px;
+  backdrop-filter: blur(5px);
 }
 
 .modal {
   background: var(--paper);
-  border-radius: var(--radius);
-  box-shadow: 0 20px 60px rgba(22, 36, 47, .3);
+  border-radius: 8px;
+  box-shadow: 0 24px 70px rgba(22, 36, 47, .34);
   width: 100%;
   max-width: 560px;
   max-height: 90vh;

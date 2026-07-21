@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #EEF2F2;
+  --bg: #EEF5F3;
   --paper: #FFFEFB;
   --ink: #16242F;
   --ink-soft: #516773;
@@ -14,8 +14,8 @@
   --gold: #A9824F;
   --line: #D7E0DF;
   --line-soft: #E9EFEE;
-  --shadow: 0 1px 2px rgba(22, 36, 47, .04), 0 8px 24px rgba(22, 36, 47, .06);
-  --radius: 10px;
+  --shadow: 0 1px 2px rgba(22, 36, 47, .04), 0 16px 38px rgba(22, 36, 47, .08);
+  --radius: 8px;
 }
 
 * { box-sizing: border-box; }
@@ -24,7 +24,7 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: 'IBM Plex Sans', sans-serif;
-  background: var(--bg);
+  background: linear-gradient(160deg, #EEF5F3 0%, #F7F4EC 48%, #EEF3F8 100%);
   color: var(--ink);
   -webkit-font-smoothing: antialiased;
 }

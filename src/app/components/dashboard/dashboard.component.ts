@@ -21,6 +21,7 @@ import Swal from 'sweetalert2';
 
 type TabId = 'historia' | 'consultas' | 'recetas';
 type ToastTipo = 'success' | 'error';
+type RecetaAlergiasOpcion = 'SI' | 'NO';
 
 interface Toast {
   id: number;
@@ -778,10 +779,29 @@ eliminarPacienteActivo(): void {
     proximaCita: '',
     firma: ''
   };
+  recetaAlergiasOpcion: RecetaAlergiasOpcion = 'NO';
 
   medicamentos: MedicamentoLinea[] = [
     { medicamento: '', indicacion: '' }
   ];
+
+  marcarAlergiasReceta(opcion: RecetaAlergiasOpcion): void {
+    this.recetaAlergiasOpcion = opcion;
+    if (opcion === 'NO') {
+      this.receta.alergias = 'Ninguna conocida';
+    } else if (this.receta.alergias === 'Ninguna conocida') {
+      this.receta.alergias = '';
+    }
+    this.refrescarVista();
+  }
+
+  private sincronizarOpcionAlergiasReceta(): void {
+    const alergias = this.receta.alergias.trim();
+    this.recetaAlergiasOpcion = alergias && alergias !== 'Ninguna conocida' ? 'SI' : 'NO';
+    if (this.recetaAlergiasOpcion === 'NO') {
+      this.receta.alergias = 'Ninguna conocida';
+    }
+  }
 
   agregarMedicamento(): void {
     this.medicamentos.push({ medicamento: '', indicacion: '' });
@@ -899,6 +919,7 @@ eliminarPacienteActivo(): void {
           return { medicamento: medicamento ?? '', indicacion: indicacion ?? '' };
         })
       : [{ medicamento: '', indicacion: '' }];
+    this.sincronizarOpcionAlergiasReceta();
     this.errorReceta = '';
     this.exitoReceta = '';
   }
@@ -912,9 +933,10 @@ eliminarPacienteActivo(): void {
       paciente: this.pacienteActivo?.nombreCompleto ?? '',
       edad: this.pacienteActivo?.edad != null ? String(this.pacienteActivo.edad) : '',
       fecha: '',
-      peso: '', talla: '', ta: '', fc: '', fr: '', temp: '', sato2: '', imc: '', alergias: '',
+      peso: '', talla: '', ta: '', fc: '', fr: '', temp: '', sato2: '', imc: '', alergias: 'Ninguna conocida',
       idx: '', proximaCita: '', firma: this.medicoActual
     };
+    this.recetaAlergiasOpcion = 'NO';
     this.medicamentos = [{ medicamento: '', indicacion: '' }];
   }
 
@@ -1050,7 +1072,7 @@ eliminarPacienteActivo(): void {
         temp: this.receta.temp,
         sato2: this.receta.sato2,
         imc: this.receta.imc,
-        alergias: this.receta.alergias
+        alergias: this.recetaAlergiasOpcion === 'NO' ? 'Ninguna conocida' : this.receta.alergias
       },
       idx: this.receta.idx,
       diagnosticoTratamiento: this.medicamentos
