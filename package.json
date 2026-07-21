@@ -9,7 +9,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:expmedic-frontend": "node dist/expmedic-frontend/server/server.mjs",
-    "electron:build": "ng build --configuration production && electron-builder"
+    "electron:build": "ng build --configuration production && electron-builder --publish=never"
   },
   "private": true,
   "packageManager": "npm@11.16.0",
