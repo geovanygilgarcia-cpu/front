@@ -8,6 +8,7 @@ export type Rol = 'ADMIN' | 'MEDICO' | 'ENFERMERA' | 'RECEPCION';
 export type Sexo = 'M' | 'F';
 
 export interface LoginResponse {
+  id: string;
   token: string;
   rol: Rol;
   nombreCompleto: string;
@@ -17,6 +18,7 @@ export interface LoginResponse {
 }
 
 export interface UsuarioSesion {
+  id: string;
   nombreCompleto: string;
   rol: Rol;
   sexo?: Sexo;

@@ -1,0 +1,236 @@
+<div class="agenda">
+
+  <div class="agenda-top">
+    <div class="agenda-title">
+      <span class="agenda-kicker">Agenda clínica</span>
+      <h1 *ngIf="!esAdmin || medicoSeleccionadoNombre">
+        {{ medicoSeleccionadoNombre || 'Selecciona un médico' }}
+      </h1>
+      <h1 *ngIf="esAdmin && !medicoSeleccionadoNombre">Selecciona un médico</h1>
+    </div>
+
+    <div class="agenda-top-actions">
+      <select
+        *ngIf="esAdmin"
+        class="agenda-select"
+        [ngModel]="medicoSeleccionadoId"
+        (ngModelChange)="cambiarMedicoSeleccionado($event)"
+        [disabled]="cargandoMedicos">
+        <option value="" disabled>{{ cargandoMedicos ? 'Cargando médicos...' : 'Selecciona un médico...' }}</option>
+        <option *ngFor="let m of medicos" [value]="m.id">
+          {{ m.nombreCompleto }}<ng-container *ngIf="m.especialidad"> — {{ m.especialidad }}</ng-container>
+        </option>
+      </select>
+
+      <button class="btn" (click)="conectarGoogleCalendar()" [disabled]="googleConectado">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        {{ googleConectado ? 'Google Calendar conectado' : 'Conectar Google Calendar' }}
+      </button>
+
+      <button class="btn primary" (click)="abrirModalNueva()" [disabled]="!medicoSeleccionadoId">
+        + Nueva cita
+      </button>
+    </div>
+  </div>
+
+  <div class="agenda-nav">
+    <div class="agenda-nav-left">
+      <button class="btn icon" (click)="irSemanaAnterior()" aria-label="Semana anterior">‹</button>
+      <div class="agenda-rango">{{ rangoSemanaTexto }}</div>
+      <button class="btn icon" (click)="irSemanaSiguiente()" aria-label="Semana siguiente">›</button>
+      <button class="btn" (click)="irHoy()">Hoy</button>
+    </div>
+    <div class="agenda-vista-switch">
+      <button class="v-btn" [class.active]="vista === 'semana'" (click)="vista = 'semana'">Semana</button>
+      <button class="v-btn" [class.active]="vista === 'dia'" (click)="vista = 'dia'">Día</button>
+    </div>
+  </div>
+
+  <div class="agenda-legend">
+    <span><i class="dot confirmada"></i>Confirmada</span>
+    <span><i class="dot pendiente"></i>Pendiente</span>
+    <span><i class="dot cancelada"></i>Cancelada</span>
+  </div>
+
+  <div class="side-status" *ngIf="!medicoSeleccionadoId && esAdmin" style="margin-bottom:16px;">
+    Elige un médico arriba para ver su agenda.
+  </div>
+
+  <div class="side-status" *ngIf="cargandoCitas">Cargando agenda…</div>
+
+  <div class="side-status error" *ngIf="errorCitas">
+    {{ errorCitas }}
+    <button (click)="cargarCitas()">Reintentar</button>
+  </div>
+
+  <!-- ===== VISTA SEMANA ===== -->
+  <div class="agenda-grid-wrap" *ngIf="medicoSeleccionadoId && !cargandoCitas && !errorCitas && vista === 'semana'">
+    <div class="agenda-grid" [style.gridTemplateColumns]="'56px repeat(' + diasSemana.length + ', minmax(120px, 1fr))'">
+
+      <div class="grid-corner"></div>
+      <div
+        class="grid-day-head"
+        *ngFor="let dia of diasSemana"
+        [class.today]="esHoy(dia)">
+        {{ etiquetaDia(dia) }}
+      </div>
+
+      <ng-container *ngFor="let hora of horas">
+        <div class="grid-hour">{{ hora }}</div>
+        <div
+          class="grid-cell"
+          *ngFor="let dia of diasSemana"
+          (click)="citasEnSlot(dia, hora).length === 0 && abrirModalNueva(dia, hora)">
+          <div
+            class="cita-slot"
+            *ngFor="let cita of citasEnSlot(dia, hora)"
+            [class]="claseEstado(cita.estado)"
+            (click)="$event.stopPropagation(); abrirModalEditar(cita)">
+            <strong>{{ cita.horaInicio }} · {{ cita.pacienteNombre }}</strong>
+            <span>{{ cita.tipo }}</span>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- ===== VISTA DÍA ===== -->
+  <div class="agenda-grid-wrap" *ngIf="medicoSeleccionadoId && !cargandoCitas && !errorCitas && vista === 'dia'">
+    <div class="agenda-grid agenda-grid-dia">
+      <div class="grid-corner"></div>
+      <div class="grid-day-head today">{{ etiquetaDia(diasSemana[0]) }}</div>
+
+      <ng-container *ngFor="let hora of horas">
+        <div class="grid-hour">{{ hora }}</div>
+        <div
+          class="grid-cell"
+          (click)="citasEnSlot(diasSemana[0], hora).length === 0 && abrirModalNueva(diasSemana[0], hora)">
+          <div
+            class="cita-slot"
+            *ngFor="let cita of citasEnSlot(diasSemana[0], hora)"
+            [class]="claseEstado(cita.estado)"
+            (click)="$event.stopPropagation(); abrirModalEditar(cita)">
+            <strong>{{ cita.horaInicio }} · {{ cita.pacienteNombre }}</strong>
+            <span>{{ cita.tipo }}</span>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <div class="agenda-proxima" *ngIf="proximaCita as cita">
+    <div class="ap-title">Próxima cita</div>
+    <div class="ap-row">
+      <div class="ap-avatar">{{ cita.pacienteNombre.slice(0, 2).toUpperCase() }}</div>
+      <div class="ap-info">
+        <div class="ap-name">
+          {{ cita.pacienteNombre }}
+          <span class="tag" [class]="claseEstado(cita.estado)">{{ cita.estado | titlecase }}</span>
+        </div>
+        <div class="ap-meta">{{ cita.fecha }} · {{ cita.horaInicio }} · {{ cita.tipo }}</div>
+      </div>
+      <button class="btn" (click)="abrirModalEditar(cita)">Ver</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== MODAL: NUEVA / EDITAR CITA ===== -->
+<div class="modal-overlay" *ngIf="modalAbierto" (click)="cerrarModal()">
+  <div class="modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>{{ citaIdEnEdicion ? 'Editar cita' : 'Nueva cita' }}</h3>
+      <button class="modal-close" (click)="cerrarModal()">×</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="error-banner" *ngIf="errorModal">{{ errorModal }}</div>
+
+      <div class="field med-autocomplete">
+        <label>Paciente</label>
+        <div class="autocomplete-wrap">
+          <input
+            [(ngModel)]="citaForm.pacienteNombre"
+            placeholder="Escribe para buscar un paciente"
+            autocomplete="off"
+            (focus)="abrirDropdownPaciente()"
+            (input)="onEscribirPaciente(); abrirDropdownPaciente()"
+            (blur)="cerrarDropdownPacienteConDelay()">
+          <svg class="autocomplete-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+
+          <div class="autocomplete-panel" *ngIf="dropdownPacienteAbierto">
+            <div class="autocomplete-empty" *ngIf="pacientesFiltradosParaCita.length === 0">
+              Sin coincidencias — puedes dejar el nombre escrito a mano
+            </div>
+            <div
+              class="autocomplete-option"
+              *ngFor="let p of pacientesFiltradosParaCita"
+              (mousedown)="seleccionarPacienteDeLista(p)">
+              <div class="ao-name">{{ p.nombreCompleto }}</div>
+              <div class="ao-sub">Exp. {{ p.expediente }} · {{ p.edad ?? '—' }} años</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid cols-3" style="margin-top:14px;">
+        <div class="field"><label>Fecha</label><input type="date" [(ngModel)]="citaForm.fecha"></div>
+        <div class="field"><label>Hora inicio</label><input type="time" [(ngModel)]="citaForm.horaInicio"></div>
+        <div class="field"><label>Hora fin</label><input type="time" [(ngModel)]="citaForm.horaFin"></div>
+      </div>
+
+      <div class="grid cols-2" style="margin-top:14px;">
+        <div class="field">
+          <label>Tipo de cita</label>
+          <select [(ngModel)]="citaForm.tipo">
+            <option *ngFor="let t of tiposCita" [value]="t">{{ t }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <select [(ngModel)]="citaForm.estado">
+            <option value="PENDIENTE">Pendiente</option>
+            <option value="CONFIRMADA">Confirmada</option>
+            <option value="CANCELADA">Cancelada</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>Notas</label>
+        <textarea rows="3" [(ngModel)]="citaForm.notas" placeholder="Motivo, indicaciones previas, etc."></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        class="btn coral"
+        *ngIf="citaIdEnEdicion"
+        (click)="eliminarCitaActiva()"
+        [disabled]="eliminandoCita"
+        style="margin-right:auto;">
+        {{ eliminandoCita ? 'Eliminando...' : 'Eliminar cita' }}
+      </button>
+      <button class="btn" (click)="cerrarModal()">Cancelar</button>
+      <button class="btn primary" (click)="guardarCita()" [disabled]="guardandoCita">
+        {{ guardandoCita ? 'Guardando...' : (citaIdEnEdicion ? 'Actualizar cita' : 'Agendar cita') }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOASTS ===== -->
+<div class="toast-container">
+  <div
+    class="toast"
+    *ngFor="let toast of toasts"
+    [class.success]="toast.tipo === 'success'"
+    [class.error]="toast.tipo === 'error'">
+    <span>{{ toast.mensaje }}</span>
+    <button class="toast-close" (click)="cerrarToast(toast.id)">×</button>
+  </div>
+</div>

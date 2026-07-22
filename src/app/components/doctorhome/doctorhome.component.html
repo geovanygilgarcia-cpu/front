@@ -1,0 +1,73 @@
+<div class="dh">
+
+  <div class="dh-hero">
+    <div class="dh-hero-text">
+      <span class="dh-kicker">{{ fechaHoyTexto }}</span>
+      <h2>{{ saludo }}, {{ tituloUsuario }}</h2>
+      <p class="dh-sub" *ngIf="esMedico && usuario?.especialidad">
+        {{ usuario?.especialidad }}
+        <ng-container *ngIf="usuario?.subespecialidad"> · {{ usuario?.subespecialidad }}</ng-container>
+      </p>
+      <p class="dh-sub" *ngIf="esAdmin">Administrador del consultorio</p>
+    </div>
+    <div class="dh-hero-actions">
+      <button class="btn primary" (click)="nuevoPaciente.emit()">+ Nuevo paciente</button>
+      <button class="btn" *ngIf="esMedico" (click)="irAAgenda.emit()">Ir a mi agenda</button>
+      <button class="btn" *ngIf="esAdmin" (click)="irAUsuarios()">Gestionar usuarios</button>
+    </div>
+  </div>
+
+  <div class="dh-stats">
+    <div class="dh-stat">
+      <span class="dh-stat-label">Pacientes a tu cargo</span>
+      <span class="dh-stat-value">{{ totalPacientes }}</span>
+    </div>
+
+    <div class="dh-stat" *ngIf="esMedico">
+      <span class="dh-stat-label">Citas de hoy</span>
+      <span class="dh-stat-value">{{ citasPendientesHoy }}</span>
+    </div>
+
+    <div class="dh-stat" *ngIf="esMedico">
+      <span class="dh-stat-label">Próxima cita</span>
+      <span class="dh-stat-value dh-stat-value-sm" *ngIf="proximaCita; else sinProxima">
+        {{ proximaCita.horaInicio }} · {{ proximaCita.pacienteNombre }}
+      </span>
+      <ng-template #sinProxima>
+        <span class="dh-stat-value dh-stat-value-sm dh-muted">Sin citas próximas</span>
+      </ng-template>
+    </div>
+
+    <div class="dh-stat" *ngIf="esAdmin">
+      <span class="dh-stat-label">Médicos activos</span>
+      <span class="dh-stat-value">{{ totalMedicos }}</span>
+    </div>
+  </div>
+
+  <div class="dh-agenda-hoy" *ngIf="esMedico">
+    <div class="dh-agenda-hoy-head">
+      <div class="dh-agenda-hoy-title">Tu agenda de hoy</div>
+      <button class="dh-ver-todo" (click)="irAAgenda.emit()">Ver agenda completa →</button>
+    </div>
+
+    <div class="side-status" *ngIf="cargando">Cargando tu agenda…</div>
+
+    <div class="side-status" *ngIf="!cargando && citasHoy.length === 0">
+      No tienes citas agendadas para hoy.
+    </div>
+
+    <div class="dh-cita-row" *ngFor="let cita of citasHoy">
+      <div class="dh-cita-hora">{{ cita.horaInicio }}</div>
+      <div class="dh-cita-info">
+        <div class="dh-cita-nombre">{{ cita.pacienteNombre }}</div>
+        <div class="dh-cita-tipo">{{ cita.tipo }}</div>
+      </div>
+      <span class="tag" [class]="claseEstado(cita.estado)">{{ cita.estado | titlecase }}</span>
+    </div>
+  </div>
+
+  <div class="dh-hint">
+    Elige un paciente de la lista de la izquierda (o crea uno nuevo) para ver o editar su expediente.
+  </div>
+
+</div>

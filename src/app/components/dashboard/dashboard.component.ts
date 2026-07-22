@@ -17,9 +17,11 @@ import { UsuarioService } from '../../services/usuarios/usuario.service';
 import { UsuarioResponse } from '../../models/usuarios/usuario.model';
 import { ReferenciaService } from '../../services/referencias.service';
 import { ReferenciaRequest, ReferenciaResponse } from '../../models/referencia.model';
+import { AgendaComponent } from '../agenda/agenda.component';
+import { DoctorHomeComponent } from '../doctorhome/doctorhome.component';
 import Swal from 'sweetalert2';
 
-type TabId = 'historia' | 'consultas' | 'recetas';
+type TabId = 'historia' | 'agenda' | 'recetas';
 type ToastTipo = 'success' | 'error';
 type RecetaAlergiasOpcion = 'SI' | 'NO';
 
@@ -56,7 +58,7 @@ interface RecetaForm {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AgendaComponent, DoctorHomeComponent],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'
 })

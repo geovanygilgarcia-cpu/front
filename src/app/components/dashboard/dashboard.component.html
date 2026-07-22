@@ -120,7 +120,7 @@
       </div>
     </div>
 
-    <div class="patient-header" *ngIf="pacienteActivo">
+    <div class="patient-header" *ngIf="pacienteActivo && tabActivo !== 'agenda'">
       <div class="ph-left">
         <div class="ph-avatar">{{ pacienteActivo.iniciales }}</div>
         <div>
@@ -141,24 +141,38 @@
       </div>
     </div>
 
-    <div class="side-status" *ngIf="!pacienteActivo" style="margin-bottom:18px;">
+    <div class="side-status" *ngIf="!pacienteActivo && tabActivo !== 'agenda'" style="margin-bottom:18px;">
       No hay ningún paciente seleccionado. Elige uno de la lista o crea uno nuevo con "+ Nuevo paciente".
     </div>
 
-    <div class="tabs">
-      <button class="tab-btn" [class.active]="tabActivo === 'historia'" (click)="seleccionarTab('historia')">Historia clínica</button>
-      <button class="tab-btn" [class.active]="tabActivo === 'recetas'" (click)="seleccionarTab('recetas')">Recetas</button>
+    <div class="tabs-row">
+      <div class="tabs" *ngIf="pacienteActivo">
+        <button class="tab-btn" [class.active]="tabActivo === 'historia'" (click)="seleccionarTab('historia')">Historia clínica</button>
+        <button class="tab-btn" [class.active]="tabActivo === 'recetas'" (click)="seleccionarTab('recetas')">Recetas</button>
+      </div>
+      <div *ngIf="!pacienteActivo"></div>
+      <button class="tab-agenda" [class.active]="tabActivo === 'agenda'" (click)="seleccionarTab('agenda')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        Agenda del doctor
+      </button>
     </div>
 
-    <!-- ===== HISTORIA CLÍNICA ===== -->
-    <section class="panel" *ngIf="tabActivo === 'historia' && !pacienteActivo">
-      <div class="card">
-        <div class="side-status" style="text-align:center; padding: 30px 10px;">
-          Selecciona un paciente de la lista para ver o crear su historia clínica.
-        </div>
-      </div>
+    <!-- ===== AGENDA ===== -->
+    <section class="panel" *ngIf="tabActivo === 'agenda'">
+      <app-agenda></app-agenda>
     </section>
 
+    <!-- ===== HOME DEL DOCTOR (sin paciente seleccionado) ===== -->
+    <section class="panel" *ngIf="!pacienteActivo && tabActivo !== 'agenda'">
+      <app-doctor-home
+        (nuevoPaciente)="abrirModalNuevoPaciente()"
+        (irAAgenda)="seleccionarTab('agenda')">
+      </app-doctor-home>
+    </section>
+
+    <!-- ===== HISTORIA CLÍNICA ===== -->
     <section class="panel" *ngIf="tabActivo === 'historia' && pacienteActivo">
       <div class="card">
 
@@ -297,14 +311,6 @@
     </section>
 
     <!-- ===== RECETAS ===== -->
-    <section class="panel" *ngIf="tabActivo === 'recetas' && !pacienteActivo">
-      <div class="card">
-        <div class="side-status" style="text-align:center; padding: 30px 10px;">
-          Selecciona un paciente de la lista para ver o crear su receta.
-        </div>
-      </div>
-    </section>
-
     <section class="panel" *ngIf="tabActivo === 'recetas' && pacienteActivo">
       <div class="card">
 
