@@ -134,6 +134,7 @@
       </div>
       <div class="ph-actions">
         <button class="btn" (click)="abrirModalEditarPaciente()">Editar paciente</button>
+        <button class="btn" (click)="seleccionarTab('agenda')">Agendar cita</button>
         <button class="btn" (click)="abrirModalReferencia()">Referir a otro médico</button>
         <button class="btn coral" (click)="eliminarPacienteActivo()" [disabled]="eliminandoPaciente">
           {{ eliminandoPaciente ? 'Eliminando...' : 'Eliminar paciente' }}
@@ -146,17 +147,18 @@
     </div>
 
     <div class="tabs-row">
-      <div class="tabs" *ngIf="pacienteActivo">
-        <button class="tab-btn" [class.active]="tabActivo === 'historia'" (click)="seleccionarTab('historia')">Historia clínica</button>
-        <button class="tab-btn" [class.active]="tabActivo === 'recetas'" (click)="seleccionarTab('recetas')">Recetas</button>
+      <div class="tabs">
+        <button class="tab-btn" [class.active]="!pacienteActivo && tabActivo !== 'agenda'" (click)="volverAlInicio()" title="Volver al inicio">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/>
+          </svg>
+          Inicio
+        </button>
+        <ng-container *ngIf="pacienteActivo">
+          <button class="tab-btn" [class.active]="tabActivo === 'historia'" (click)="seleccionarTab('historia')">Historia clínica</button>
+          <button class="tab-btn" [class.active]="tabActivo === 'recetas'" (click)="seleccionarTab('recetas')">Recetas</button>
+        </ng-container>
       </div>
-      <div *ngIf="!pacienteActivo"></div>
-      <button class="tab-agenda" [class.active]="tabActivo === 'agenda'" (click)="seleccionarTab('agenda')">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Agenda del doctor
-      </button>
     </div>
 
     <!-- ===== AGENDA ===== -->
