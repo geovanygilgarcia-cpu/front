@@ -174,7 +174,7 @@
 .password-wrap {
   position: relative;
 
-  input { padding-right: 68px; }
+  input { padding-right: 96px; }
 }
 
 .toggle-password {
@@ -182,42 +182,69 @@
   right: 8px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
-  border: none;
+  min-height: 28px;
+  background: rgba(47, 111, 107, .08);
+  border: 1px solid rgba(47, 111, 107, .12);
+  border-radius: 7px;
   font-family: inherit;
   font-size: 11.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--teal-dark);
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 9px;
+  transition: background .16s ease, border-color .16s ease, box-shadow .16s ease, color .16s ease;
 
-  &:hover { color: var(--teal); }
+  &:hover {
+    background: var(--teal-pale);
+    border-color: #CFE2DF;
+    color: var(--teal);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--button-focus);
+  }
 }
 
 .btn-submit {
   width: 100%;
   font-family: inherit;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  min-height: 42px;
   padding: 11px 15px;
   border-radius: 8px;
-  border: 1px solid var(--teal);
-  background: linear-gradient(135deg, var(--teal), #3D9886);
+  border: 1px solid rgba(29, 71, 68, .88);
+  background: linear-gradient(135deg, var(--teal-dark) 0%, var(--teal) 56%, #3D9886 100%);
   color: #fff;
   cursor: pointer;
   margin-top: 6px;
-  box-shadow: 0 14px 28px rgba(47, 111, 107, .2);
+  box-shadow: 0 1px 2px rgba(22, 36, 47, .08), 0 14px 28px rgba(47, 111, 107, .26), inset 0 1px 0 rgba(255, 255, 255, .22);
   transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
 
   &:hover:not(:disabled) {
-    background: linear-gradient(135deg, var(--teal-dark), var(--teal));
+    background: linear-gradient(135deg, #173A37 0%, var(--teal-dark) 45%, #2F7D72 100%);
     transform: translateY(-1px);
-    box-shadow: 0 18px 32px rgba(47, 111, 107, .24);
+    box-shadow: 0 2px 4px rgba(22, 36, 47, .1), 0 18px 34px rgba(47, 111, 107, .32), inset 0 1px 0 rgba(255, 255, 255, .24);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(22, 36, 47, .1), 0 8px 18px rgba(47, 111, 107, .2);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 14px 28px rgba(47, 111, 107, .24), var(--button-focus);
   }
 
   &:disabled {
-    opacity: .65;
+    background: #F2F6F5;
+    border-color: var(--line);
+    color: var(--ink-faint);
+    box-shadow: none;
     cursor: not-allowed;
+    opacity: .78;
   }
 }
 

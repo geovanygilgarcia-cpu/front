@@ -49,9 +49,31 @@
   </div>
 
   <div class="agenda-legend">
-    <span><i class="dot confirmada"></i>Confirmada</span>
-    <span><i class="dot pendiente"></i>Pendiente</span>
-    <span><i class="dot cancelada"></i>Cancelada</span>
+    <button
+      type="button"
+      class="legend-chip"
+      [class.active]="estadoFiltro === 'CONFIRMADA'"
+      [class.dimmed]="estadoFiltro && estadoFiltro !== 'CONFIRMADA'"
+      (click)="toggleFiltroEstado('CONFIRMADA')">
+      <i class="dot confirmada"></i>Confirmada
+    </button>
+    <button
+      type="button"
+      class="legend-chip"
+      [class.active]="estadoFiltro === 'PENDIENTE'"
+      [class.dimmed]="estadoFiltro && estadoFiltro !== 'PENDIENTE'"
+      (click)="toggleFiltroEstado('PENDIENTE')">
+      <i class="dot pendiente"></i>Pendiente
+    </button>
+    <button
+      type="button"
+      class="legend-chip"
+      [class.active]="estadoFiltro === 'CANCELADA'"
+      [class.dimmed]="estadoFiltro && estadoFiltro !== 'CANCELADA'"
+      (click)="toggleFiltroEstado('CANCELADA')">
+      <i class="dot cancelada"></i>Cancelada
+    </button>
+    <span class="legend-hint" *ngIf="estadoFiltro">Mostrando solo: {{ estadoFiltro | titlecase }} · <a (click)="estadoFiltro = null">quitar filtro</a></span>
   </div>
 
   <div class="side-status" *ngIf="!medicoSeleccionadoId && esAdmin" style="margin-bottom:16px;">
@@ -71,25 +93,35 @@
 
       <div class="grid-corner"></div>
       <div
-        class="grid-day-head"
+        class="grid-day-head clickable"
         *ngFor="let dia of diasSemana"
-        [class.today]="esHoy(dia)">
-        {{ etiquetaDia(dia) }}
+        [class.today]="esHoy(dia)"
+        (click)="seleccionarDia(dia)"
+        title="Ver este día">
+        <span class="gdh-weekday">{{ etiquetaDiaSemana(dia) }}</span>
+        <span class="gdh-num">{{ dia.getDate() }}</span>
       </div>
 
-      <ng-container *ngFor="let hora of horas">
-        <div class="grid-hour">{{ hora }}</div>
+      <ng-container *ngFor="let hora of horas; let i = index">
+        <div class="grid-hour" [class.row-alt]="i % 2 === 1">{{ hora }}</div>
         <div
           class="grid-cell"
           *ngFor="let dia of diasSemana"
+          [class.row-alt]="i % 2 === 1"
+          [class.is-today]="esHoy(dia)"
           (click)="citasEnSlot(dia, hora).length === 0 && abrirModalNueva(dia, hora)">
+          <span class="cell-add-hint" *ngIf="citasEnSlot(dia, hora).length === 0">+ Agendar</span>
+          <div class="now-line" *ngIf="esCeldaActual(dia, hora)" [style.top.%]="porcentajeHoraActual()"></div>
           <div
             class="cita-slot"
             *ngFor="let cita of citasEnSlot(dia, hora)"
             [class]="claseEstado(cita.estado)"
             (click)="$event.stopPropagation(); abrirModalEditar(cita)">
-            <strong>{{ cita.horaInicio }} · {{ cita.pacienteNombre }}</strong>
-            <span>{{ cita.tipo }}</span>
+            <i class="dot"></i>
+            <div class="cs-body">
+              <strong>{{ cita.horaInicio }}–{{ cita.horaFin }} · {{ cita.pacienteNombre }}</strong>
+              <span>{{ cita.tipo }}</span>
+            </div>
           </div>
         </div>
       </ng-container>
@@ -97,23 +129,46 @@
   </div>
 
   <!-- ===== VISTA DÍA ===== -->
+  <div class="agenda-dia-switch" *ngIf="medicoSeleccionadoId && !cargandoCitas && !errorCitas && vista === 'dia'">
+    <button
+      type="button"
+      class="dia-chip"
+      *ngFor="let dia of diasSemana"
+      [class.active]="aYyyyMmDd(dia) === aYyyyMmDd(diaSeleccionado)"
+      [class.today]="esHoy(dia)"
+      (click)="diaSeleccionado = dia">
+      <span class="dc-weekday">{{ etiquetaDiaSemana(dia) }}</span>
+      <span class="dc-num">{{ dia.getDate() }}</span>
+    </button>
+  </div>
+
   <div class="agenda-grid-wrap" *ngIf="medicoSeleccionadoId && !cargandoCitas && !errorCitas && vista === 'dia'">
     <div class="agenda-grid agenda-grid-dia">
       <div class="grid-corner"></div>
-      <div class="grid-day-head today">{{ etiquetaDia(diasSemana[0]) }}</div>
+      <div class="grid-day-head" [class.today]="esHoy(diaSeleccionado)">
+        <span class="gdh-weekday">{{ etiquetaDiaSemana(diaSeleccionado) }}</span>
+        <span class="gdh-num">{{ diaSeleccionado.getDate() }}</span>
+      </div>
 
-      <ng-container *ngFor="let hora of horas">
-        <div class="grid-hour">{{ hora }}</div>
+      <ng-container *ngFor="let hora of horas; let i = index">
+        <div class="grid-hour" [class.row-alt]="i % 2 === 1">{{ hora }}</div>
         <div
           class="grid-cell"
-          (click)="citasEnSlot(diasSemana[0], hora).length === 0 && abrirModalNueva(diasSemana[0], hora)">
+          [class.row-alt]="i % 2 === 1"
+          [class.is-today]="esHoy(diaSeleccionado)"
+          (click)="citasEnSlot(diaSeleccionado, hora).length === 0 && abrirModalNueva(diaSeleccionado, hora)">
+          <span class="cell-add-hint" *ngIf="citasEnSlot(diaSeleccionado, hora).length === 0">+ Agendar</span>
+          <div class="now-line" *ngIf="esCeldaActual(diaSeleccionado, hora)" [style.top.%]="porcentajeHoraActual()"></div>
           <div
             class="cita-slot"
-            *ngFor="let cita of citasEnSlot(diasSemana[0], hora)"
+            *ngFor="let cita of citasEnSlot(diaSeleccionado, hora)"
             [class]="claseEstado(cita.estado)"
             (click)="$event.stopPropagation(); abrirModalEditar(cita)">
-            <strong>{{ cita.horaInicio }} · {{ cita.pacienteNombre }}</strong>
-            <span>{{ cita.tipo }}</span>
+            <i class="dot"></i>
+            <div class="cs-body">
+              <strong>{{ cita.horaInicio }}–{{ cita.horaFin }} · {{ cita.pacienteNombre }}</strong>
+              <span>{{ cita.tipo }}</span>
+            </div>
           </div>
         </div>
       </ng-container>

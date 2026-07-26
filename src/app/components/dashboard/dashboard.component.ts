@@ -287,6 +287,11 @@ export class DashboardComponent implements OnInit {
     this.tabActivo = tab;
   }
 
+  volverAlInicio(): void {
+    this.pacienteActivoId = null;
+    this.tabActivo = 'historia';
+  }
+
   seleccionarPaciente(id: number): void {
     this.pacienteActivoId = id;
 

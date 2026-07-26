@@ -112,14 +112,28 @@
 .dh-ver-todo {
   font-family: inherit;
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--teal-dark);
-  background: none;
-  border: none;
+  background: rgba(47, 111, 107, .08);
+  border: 1px solid rgba(47, 111, 107, .12);
+  border-radius: 8px;
   cursor: pointer;
-  padding: 0;
+  min-height: 30px;
+  padding: 5px 10px;
+  transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease, transform .15s ease;
 
-  &:hover { text-decoration: underline; }
+  &:hover {
+    background: var(--teal-pale);
+    border-color: #CFE2DF;
+    color: var(--teal);
+    box-shadow: 0 8px 18px rgba(47, 111, 107, .1);
+    transform: translateY(-1px);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--button-focus);
+  }
 }
 
 .dh-cita-row {
@@ -151,33 +165,6 @@
 }
 
 /* ---------- Componentes compartidos ---------- */
-
-.btn {
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  padding: 10px 15px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: #fff;
-  color: var(--ink);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 1px 2px rgba(22, 36, 47, .04);
-  transition: transform .15s ease, border-color .15s ease, color .15s ease, background .15s ease, box-shadow .15s ease;
-
-  &:hover { border-color: var(--teal); color: var(--teal-dark); box-shadow: 0 10px 22px rgba(22, 36, 47, .08); transform: translateY(-1px); }
-
-  &.primary {
-    background: linear-gradient(135deg, var(--teal), #3D9886);
-    border-color: var(--teal);
-    color: #fff;
-    box-shadow: 0 12px 28px rgba(47, 111, 107, .2);
-    &:hover { background: linear-gradient(135deg, var(--teal-dark), var(--teal)); color: #fff; }
-  }
-}
 
 .tag {
   font-size: 10.5px;

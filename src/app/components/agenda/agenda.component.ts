@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AgendaService } from '../../services/agenda.service';
@@ -54,7 +54,7 @@ function sumarMedia(hora: string): string {
   templateUrl: './agenda.component.html',
   styleUrl: './agenda.component.scss'
 })
-export class AgendaComponent implements OnInit {
+export class AgendaComponent implements OnInit, OnDestroy {
 
   private agendaService = inject(AgendaService);
   private usuarioService = inject(UsuarioService);
@@ -71,6 +71,7 @@ export class AgendaComponent implements OnInit {
   vista: VistaAgenda = 'semana';
   fechaReferencia = new Date();
   diasSemana: Date[] = [];
+  diaSeleccionado: Date = new Date();
 
   citas: Cita[] = [];
   cargandoCitas = false;
@@ -95,6 +96,11 @@ export class AgendaComponent implements OnInit {
 
   pacientes: Paciente[] = [];
   dropdownPacienteAbierto = false;
+
+  estadoFiltro: EstadoCita | null = null;
+
+  private horaActual = new Date();
+  private relojId: ReturnType<typeof setInterval> | null = null;
 
   get esAdmin(): boolean {
     return this.authService.usuarioActual()?.rol === 'ADMIN';
@@ -132,6 +138,16 @@ export class AgendaComponent implements OnInit {
       this.cargarCitas();
       this.cargarProximaCita();
     }
+
+    // Refresca la línea de "hora actual" en la grilla cada minuto.
+    this.relojId = setInterval(() => {
+      this.horaActual = new Date();
+      this.refrescarVista();
+    }, 60000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.relojId !== null) clearInterval(this.relojId);
   }
 
   private cargarMedicos(): void {
@@ -217,6 +233,18 @@ export class AgendaComponent implements OnInit {
   private calcularDiasSemana(): void {
     const lunes = this.lunesDeSemana(this.fechaReferencia);
     this.diasSemana = Array.from({ length: 6 }, (_, i) => this.sumarDias(lunes, i));
+
+    // Si el día seleccionado quedó fuera de la semana visible (p.ej. al navegar de semana),
+    // volvemos a elegir uno sensato: hoy si cae en esta semana, si no el lunes.
+    const siguesEnLaSemana = this.diasSemana.some(d => this.aYyyyMmDd(d) === this.aYyyyMmDd(this.diaSeleccionado));
+    if (!siguesEnLaSemana) {
+      this.diaSeleccionado = this.diasSemana.find(d => this.esHoy(d)) ?? this.diasSemana[0];
+    }
+  }
+
+  seleccionarDia(dia: Date): void {
+    this.diaSeleccionado = dia;
+    this.vista = 'dia';
   }
 
   get rangoSemanaTexto(): string {
@@ -235,6 +263,11 @@ export class AgendaComponent implements OnInit {
     return txt.charAt(0).toUpperCase() + txt.slice(1);
   }
 
+  etiquetaDiaSemana(fecha: Date): string {
+    const txt = fecha.toLocaleDateString('es-MX', { weekday: 'short' });
+    return txt.charAt(0).toUpperCase() + txt.slice(1).replace('.', '');
+  }
+
   esHoy(fecha: Date): boolean {
     const hoy = new Date();
     return this.aYyyyMmDd(fecha) === this.aYyyyMmDd(hoy);
@@ -247,6 +280,7 @@ export class AgendaComponent implements OnInit {
     const horaBase = hora.split(':')[0];
     return this.citas
       .filter(c => c.fecha === fechaStr && c.horaInicio.split(':')[0] === horaBase)
+      .filter(c => !this.estadoFiltro || c.estado === this.estadoFiltro)
       .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
   }
 
@@ -254,6 +288,25 @@ export class AgendaComponent implements OnInit {
     if (estado === 'CONFIRMADA') return 'confirmada';
     if (estado === 'PENDIENTE') return 'pendiente';
     return 'cancelada';
+  }
+
+  // ───────────── Filtro por estado (leyenda clicable) ─────────────
+
+  toggleFiltroEstado(estado: EstadoCita): void {
+    this.estadoFiltro = this.estadoFiltro === estado ? null : estado;
+  }
+
+  // ───────────── Indicador de "hora actual" ─────────────
+
+  /** true si `dia` es hoy y `hora` es el bloque de la hora en curso (para dibujar la línea de "ahora"). */
+  esCeldaActual(dia: Date, hora: string): boolean {
+    if (!this.esHoy(dia)) return false;
+    return this.horaActual.getHours() === Number(hora.split(':')[0]);
+  }
+
+  /** Porcentaje vertical (0-100) dentro de la celda de la hora en curso, según los minutos transcurridos. */
+  porcentajeHoraActual(): number {
+    return (this.horaActual.getMinutes() / 60) * 100;
   }
 
   // ───────────── Modal: nueva / editar cita ─────────────
@@ -331,6 +384,49 @@ export class AgendaComponent implements OnInit {
     }
 
     this.errorModal = '';
+
+    const conflicto = this.buscarConflictoHorario();
+    if (conflicto) {
+      this.confirmarConflictoHorario(conflicto).then((continuar) => {
+        this.refrescarVista();
+        if (continuar) this.procederGuardarCita();
+      });
+      return;
+    }
+
+    this.procederGuardarCita();
+  }
+
+  /**
+   * Busca, entre las citas ya cargadas para la semana visible, una que se traslape
+   * con el horario del formulario (mismo médico y fecha, sin contar canceladas ni la propia
+   * cita cuando se está editando).
+   */
+  private buscarConflictoHorario(): Cita | null {
+    const { fecha, horaInicio, horaFin } = this.citaForm;
+    return this.citas.find(c =>
+      c.fecha === fecha &&
+      c.id !== this.citaIdEnEdicion &&
+      c.estado !== 'CANCELADA' &&
+      horaInicio < c.horaFin && horaFin > c.horaInicio
+    ) ?? null;
+  }
+
+  private confirmarConflictoHorario(conflicto: Cita): Promise<boolean> {
+    return Swal.fire({
+      title: 'Ese horario ya está ocupado',
+      html: `Se traslapa con la cita de <b>${conflicto.pacienteNombre}</b> de ${conflicto.horaInicio} a ${conflicto.horaFin}.<br>¿Deseas agendar esta cita de todas formas?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#C0604A',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Agendar de todas formas',
+      cancelButtonText: 'Cancelar',
+      reverseButtons: true
+    }).then((result) => result.isConfirmed);
+  }
+
+  private procederGuardarCita(): void {
     this.guardandoCita = true;
 
     const request: CitaRequest = {
@@ -498,7 +594,7 @@ export class AgendaComponent implements OnInit {
     return d;
   }
 
-  private aYyyyMmDd(fecha: Date): string {
+  aYyyyMmDd(fecha: Date): string {
     const y = fecha.getFullYear();
     const m = String(fecha.getMonth() + 1).padStart(2, '0');
     const d = String(fecha.getDate()).padStart(2, '0');
